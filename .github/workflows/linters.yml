@@ -1,0 +1,73 @@
+name: linters
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  linter:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+    - name: Install dependencies
+      run: |
+        # INSTALLS
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        echo "::set-env name=PYTHONPATH::/home/runner/work/ai-economist-opensource/ai-economist-opensource/"
+
+    - name: Sort imports with isort
+      run: |
+        # isort config compatible with black
+        isort --multi-line=3 --trailing-comma --force-grid-wrap=0 --use-parentheses --line-width=88  --check-only -rc ai_economist/
+      continue-on-error: false
+
+    - name: Format code with black
+      run: |
+        black --line-length 88 --check ai_economist/
+      continue-on-error: false
+
+    - name: Lint code with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 --count --select=E9,F63,F7,F82 --show-source --statistics ai_economist ai_economist/
+        # exit-zero treats all errors as warnings. Also outputs error counts
+        # Add as many codes under --ignore for the checks to ignore
+        # E203: Whitespace before ':' (will be taken care of by Black)
+        # C901: Function is too complex
+        # W503: Line break occurred before a binary operator (Black is expected to take care of formatting)
+        # F401: Module imported but unused
+        flake8  --ignore=E203,C901,W503,F401 --count --max-complexity=15 --max-line-length=88 --statistics ai_economist/
+
+    - name: Lint code with pylint
+      run: |
+        # Add as many codes under --disable= for the checks to disable
+        # Note: exit-zero disregards all errors
+        # *** CODES CURRENTLY DISABLED ***
+        # C0330: bad-continuation
+        # R0801: duplicate-code
+        # C0103: invalid-name
+        # C0114: missing-module-docstring
+        # C0116: missing-function-docstring
+        # R0912: too-many-branches
+        # R0913: too-many-arguments
+        # R0914: too-many-locals
+        # R0915: too-many-statements
+        # R0902: too-many-instance-attributes
+        # R0903: too-few-public-methods
+        # R0904: too-many-public-methods
+        # R0201: no-self-use
+        # C0302: too-many-lines
+
+        pylint --disable bad-continuation,duplicate-code,invalid-name,missing-module-docstring,missing-function-docstring,too-many-branches,too-many-arguments,too-many-locals,too-many-statements,too-many-instance-attributes,too-few-public-methods,too-many-public-methods,no-self-use,too-many-lines ai_economist/
+
+    - name: Test with pytest
+      run: |
+        pytest
