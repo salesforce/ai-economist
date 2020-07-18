@@ -398,7 +398,7 @@ class Uniform(BaseEnvironment):
         agents themselves (i.e. inventory, locations, etc.).
 
         Here, empty inventories, give mobile agents any starting coin, and place them
-        in random accesible locations to start.
+        in random accessible locations to start.
         """
         self.world.clear_agent_locs()
 

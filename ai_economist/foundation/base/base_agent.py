@@ -482,7 +482,7 @@ Example:
     assert isinstance(agent, ExampleAgent)
 
 Notes:
-    The foundation package exposes the agent registy as: foundation.agents
+    The foundation package exposes the agent registry as: foundation.agents
 
     An Agent class that is defined and registered following the above example will
     only be visible in foundation.agents if defined/registered in a file that is

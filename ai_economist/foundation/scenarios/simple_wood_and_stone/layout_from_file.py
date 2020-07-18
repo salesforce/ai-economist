@@ -290,7 +290,7 @@ class LayoutFromFile(BaseEnvironment):
         Part 2/2 of scenario reset. This method handles resetting the state of the
         agents themselves (i.e. inventory, locations, etc.).
 
-        Here, empty inventories and place mobile agents in random, accesible
+        Here, empty inventories and place mobile agents in random, accessible
         locations to start. Note: If using fixed_four_skill_and_loc, the starting
         locations will be overridden in self.additional_reset_steps.
         """

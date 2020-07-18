@@ -25,7 +25,7 @@ class Landmark:
         solid: If the landmark creates a physical barrier to movement (that is,
             if agents are prevented from occupying cells with the landmark).
             Importantly, if the landmark is ownable, the agent that owns a given
-            lamdmark can occupy its cell even if the landmark is solid.
+            landmark can occupy its cell even if the landmark is solid.
     """
 
     name = None
