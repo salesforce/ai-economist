@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 
 import numpy as np
+import random
 
 from ai_economist.foundation.agents import agent_registry
 from ai_economist.foundation.base.registrar import Registry
@@ -446,6 +447,24 @@ class BaseEnvironment(ABC):
             metrics = env.previous_episode_metrics
         """
         return self._last_ep_replay_log
+
+    # Seed control
+    # -----------------
+
+    @staticmethod
+    def seed(seed):
+        """Sets the numpy and build in random number generator seed.
+
+        Args:
+            seed (int, float): Seed value to use. Must be > 0. Converted to int
+                internally if provided value is a float.
+        """
+        assert isinstance(seed, (int, float))
+        seed = int(seed)
+        assert seed > 0
+
+        np.random.seed(seed)
+        random.seed(seed)
 
     # Getters & Setters
     # -----------------
