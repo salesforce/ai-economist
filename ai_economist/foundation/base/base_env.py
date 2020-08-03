@@ -43,7 +43,7 @@ class BaseEnvironment(ABC):
     to handle reward.
 
     Interactions with the environment are handled through components, which define
-    actions that agents can perform. Components are defined trhough distinct
+    actions that agents can perform. Components are defined through distinct
     Component classes (which extend BaseComponent [see base_component.py]) and must
     be included in the components_registry in order to be used (see below).
     Components influence the environment dynamics through effects they have on
@@ -236,7 +236,7 @@ class BaseEnvironment(ABC):
         self._episode_length = int(episode_length)
         assert self._episode_length >= 1
 
-        # Can an agent/planner executle multiple actions (1 per action subspace) per
+        # Can an agent/planner execute multiple actions (1 per action subspace) per
         # timestep (=True) or just one action (=False)
         self.multi_action_mode_agents = bool(multi_action_mode_agents)
         self.multi_action_mode_planner = bool(multi_action_mode_planner)
@@ -740,7 +740,7 @@ class BaseEnvironment(ABC):
             seed_state (tuple or list): Optional state that the numpy RNG should be set
                 to prior to the reset cycle must be length 5, following the format
                 expected by np.random.set_state()
-            force_dense_logging (bool): Optional whether to force dense loggin to take
+            force_dense_logging (bool): Optional whether to force dense logging to take
                 place this episode; default behavior is to do dense logging every
                 create_dense_log_every episodes
 
@@ -839,7 +839,7 @@ class BaseEnvironment(ABC):
                 which itself is a dictionary. The "agent_idx" key matches the
                 agent.idx property for the given agent.
             rew (dict): A dictionary of {"agent_idx": reward} with an entry for each
-                agent that also receieves an observation. Each reward value is a scalar.
+                agent that also receives an observation. Each reward value is a scalar.
             done (dict): A dictionary with a single key "__all__". The associated
                 value is False when self.timestep < self.episode_length and True
                 otherwise.
@@ -1023,7 +1023,7 @@ Example:
     assert isinstance(scenario, ExampleScenario)
 
 Notes:
-    The foundation package exposes the scenario registy as: foundation.scenarios
+    The foundation package exposes the scenario registry as: foundation.scenarios
 
     A Scenario class that is defined and registered following the above example will
     only be visible in foundation.scenarios if defined/registered in a file that is

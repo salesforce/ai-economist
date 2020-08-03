@@ -10,7 +10,7 @@ from ai_economist.foundation.base.registrar import Registry
 class Endogenous:
     """Base class for endogenous entity classes.
 
-    Endogenous entitities are those that, conceptually, describe the internal state
+    Endogenous entities are those that, conceptually, describe the internal state
     of an agent. This provides a convenient way to separate physical entities (which
     may exist in the world, be exchanged among agents, or are otherwise in principal
     observable by others) from endogenous entities (such as the amount of labor

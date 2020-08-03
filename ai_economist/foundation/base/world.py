@@ -162,7 +162,7 @@ class Maps:
             # If the agent isn't actually moving, just return
             if (curr_r, curr_c) == (r, c):
                 return
-            # Make the location the agent is currently at as unoccpied
+            # Make the location the agent is currently at as unoccupied
             # (since the agent is going to move)
             self._unoccupied[curr_r, curr_c] = 1
 
@@ -306,7 +306,7 @@ class Maps:
 
     @property
     def empty(self):
-        """Return a booling map indicating which locations are empty.
+        """Return a boolean map indicating which locations are empty.
 
         Empty locations have no landmarks or resources."""
         return self.state.sum(axis=0) == 0

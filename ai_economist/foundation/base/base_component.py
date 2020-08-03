@@ -76,7 +76,7 @@ class BaseComponent(ABC):
 
         assert isinstance(self.required_entities, (tuple, list))
 
-        assert isinstance(world, World)
+        self.check_world(world)
         self._world = world
 
         assert isinstance(episode_length, int) and episode_length > 0
@@ -282,7 +282,7 @@ class BaseComponent(ABC):
         For example, say the component defines a set of 4 actions for agents of type
         "BasicMobileAgent" (self.get_n_actions("BasicMobileAgent) --> 4). Because all
         action spaces include a NO-OP action, there are 5 available actions,
-        interpretted in this example as: NO-OP (index=0), moving up (index=1),
+        interpreted in this example as: NO-OP (index=0), moving up (index=1),
         down (index=2), left (index=3), or right (index=4). Say also that agent-0 (the
         agent with agent.idx=0) is prevented from moving left but can otherwise move.
         In this case, generate_masks(world)['0'] should point to a length-4 binary
@@ -298,7 +298,7 @@ class BaseComponent(ABC):
         length matches the number of actions in "action_set_name_m".
 
         The default behavior (below) keeps all actions available. The code gives an
-        example of expected formating.
+        example of expected formatting.
         """
         world = self.world
         masks = {}
@@ -398,7 +398,7 @@ Example:
     assert isinstance(component, ExampleComponent)
 
 Notes:
-    The foundation package exposes the component registy as: foundation.components
+    The foundation package exposes the component registry as: foundation.components
 
     A Component class that is defined and registered following the above example will
     only be visible in foundation.components if defined/registered in a file that is

@@ -168,7 +168,7 @@ class ContinuousDoubleAuction(BaseComponent):
     def create_bid(self, resource, agent, max_payment):
         """Create a new bid for resource, with agent offering max_payment.
 
-        On a succesful trade, payment will be at most max_payment, possibly less.
+        On a successful trade, payment will be at most max_payment, possibly less.
 
         The agent places the bid coin into escrow so that it may not be spent on
         something else while the order exists.
@@ -205,7 +205,7 @@ class ContinuousDoubleAuction(BaseComponent):
         """
         Create a new ask for resource, with agent asking for min_income.
 
-        On a succesful trade, income will be at least min_income, possibly more.
+        On a successful trade, income will be at least min_income, possibly more.
 
         The agent places one unit of resource into escrow so that it may not be used
         for something else while the order exists.
@@ -503,7 +503,7 @@ class ContinuousDoubleAuction(BaseComponent):
         Here, agents and the planner both observe historical market behavior and
         outstanding bids/asks for each tradable commodity. Agents only see the
         outstanding bids/asks to which they could respond (that is, that they did not
-        submit). Agents also see their own outsanding bids/asks.
+        submit). Agents also see their own outstanding bids/asks.
         """
         world = self.world
 
@@ -681,7 +681,7 @@ class ContinuousDoubleAuction(BaseComponent):
 
         Returns:
             trades (list): A list of trade events. Each entry corresponds to a single
-                timestep and contains a description of any trades that occured on
+                timestep and contains a description of any trades that occurred on
                 that timestep.
         """
         return self.executed_trades

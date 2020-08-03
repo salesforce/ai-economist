@@ -133,7 +133,7 @@ class Build(BaseComponent):
             # Build! (If you can.)
             elif action == 1:
                 if self.agent_can_build(agent):
-                    # Remove the resouces
+                    # Remove the resources
                     for resource, cost in self.resource_cost.items():
                         agent.state["inventory"][resource] -= cost
 
@@ -259,7 +259,7 @@ class Build(BaseComponent):
 
         Returns:
             builds (list): A list of build events. Each entry corresponds to a single
-                timestep and contains a description of any builds that occured on
+                timestep and contains a description of any builds that occurred on
                 that timestep.
 
         """
