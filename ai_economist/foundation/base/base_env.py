@@ -4,11 +4,11 @@
 # For full license text, see the LICENSE file in the repo root
 # or https://opensource.org/licenses/BSD-3-Clause
 
+import random
 from abc import ABC, abstractmethod
 from copy import deepcopy
 
 import numpy as np
-import random
 
 from ai_economist.foundation.agents import agent_registry
 from ai_economist.foundation.base.registrar import Registry
