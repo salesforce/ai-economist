@@ -178,6 +178,10 @@ class LayoutFromFile(BaseEnvironment):
             bm = self.get_component("Build")
             assert bm.skill_dist == "pareto"
             pmsm = bm.payment_max_skill_multiplier
+
+            # Temporarilly switch to a fixed seed for controlling randomness
+            seed_state = np.random.get_state()
+            np.random.seed(seed=1)
             ranked_skills = np.array(
                 [
                     np.sort(
@@ -186,6 +190,8 @@ class LayoutFromFile(BaseEnvironment):
                     for _ in range(100000)
                 ]
             )
+            np.random.set_state(seed_state)
+
             self._avg_ranked_skill = ranked_skills.mean(axis=0) * bm.payment
             self._ranked_locs = [
                 # Worst agent goes in top right
