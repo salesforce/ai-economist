@@ -453,7 +453,7 @@ class BaseEnvironment(ABC):
 
     @staticmethod
     def seed(seed):
-        """Sets the numpy and build in random number generator seed.
+        """Sets the numpy and built-in random number generator seed.
 
         Args:
             seed (int, float): Seed value to use. Must be > 0. Converted to int

@@ -179,7 +179,7 @@ class LayoutFromFile(BaseEnvironment):
             assert bm.skill_dist == "pareto"
             pmsm = bm.payment_max_skill_multiplier
 
-            # Temporarilly switch to a fixed seed for controlling randomness
+            # Temporarily switch to a fixed seed for controlling randomness
             seed_state = np.random.get_state()
             np.random.seed(seed=1)
             ranked_skills = np.array(
