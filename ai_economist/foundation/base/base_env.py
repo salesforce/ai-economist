@@ -74,7 +74,7 @@ class BaseEnvironment(ABC):
     accessed via registries. See top example.
 
     Example:
-        import economic sim
+        from ai_economist import foundation
         # foundation.scenarios  <-- Scenario class registry
         # foundation.components <-- Component class registry
         # foundation.agents     <-- Agent class registry
@@ -90,7 +90,7 @@ class BaseEnvironment(ABC):
         GatherComponentClass = foundation.components.get("Gather")
 
     Example:
-        import foundation
+        from ai_economist import foundation
         from ai_economist.foundation.base.base_env import BaseEnvironment
 
         ScenarioClass = foundation.scenarios.get(...)
@@ -155,6 +155,9 @@ class BaseEnvironment(ABC):
             (the default), the world state will be included in the dense log for
             timesteps where t is a multiple of 50.
             Note: More frequent world snapshots increase the dense log memory footprint.
+        seed (int, optional): If provided, sets the numpy and built-in random number
+            generator seeds to seed. You can control the seed after env construction
+            using the 'seed' method.
     """
 
     # The name associated with this Scenario class (must be unique)
@@ -180,6 +183,7 @@ class BaseEnvironment(ABC):
         allow_observation_scaling=True,
         dense_log_frequency=None,
         world_dense_log_frequency=50,
+        seed=None,
     ):
 
         # Make sure a name was declared by child class
@@ -265,6 +269,10 @@ class BaseEnvironment(ABC):
         # How often (in timesteps) to snapshot the world map when creating the denselog
         self._world_dense_log_frequency = int(world_dense_log_frequency)
         assert self._world_dense_log_frequency >= 1
+
+        # Seed control
+        if seed is not None:
+            self.seed(seed)
 
         # Initialize the set of entities used in the game that's being created.
         # Coin and Labor are always included.
