@@ -1,6 +1,6 @@
 # Foundation: An Economic Simulation Framework
 
-This repo contains an implementation of Foundation, a framework for flexible, modular, and composable environments that **model socio-economic behaviors and dynamics in a society of agents and governments**.
+This repo contains an implementation of Foundation, a framework for flexible, modular, and composable environments that **model socio-economic behaviors and dynamics in a society with both agents and governments**.
 
 Foundation provides a [Gym](https://gym.openai.com/)-style API:
 
@@ -25,11 +25,16 @@ If you use this code in your research, please cite us using this BibTeX entry:
 
 For more information and context, check out:
 
-- [Einstein.ai blogpost](https://blog.einstein.ai/the-ai-economist/) about the AI Economist.
+- [The AI Economist website](https://www.einstein.ai/the-ai-economist)
+- [Blog: The AI Economist: Improving Equality and Productivity with AI-Driven Tax Policies](https://blog.einstein.ai/the-ai-economist/)
+- [Blog: The AI Economist moonshot](https://blog.einstein.ai/the-ai-economist-moonshot/)
 
 ## Join us on Slack
 
-If you're interested in extending this framework, discussing machine learning for economics, and collaborating on research project, join our Slack channel: [link](https://aieconomist.slack.com) or email us @ ai.economist@salesforce.com.
+If you're interested in extending this framework, discussing machine learning for economics, and collaborating on research project:
+
+- join our Slack channel [aieconomist.slack.com](https://aieconomist.slack.com) using this [invite link](https://join.slack.com/t/aieconomist/shared_invite/zt-g71ajic7-XaMygwNIup~CCzaR1T0wgA), or
+- email us @ ai.economist@salesforce.com.
 
 ## Installation Instructions
 
