@@ -38,7 +38,7 @@ If you're interested in extending this framework, discussing machine learning fo
 
 ## Installation Instructions
 
-To get started, you'll need to have Python 3.7+ installed.
+To get started, you'll need to have Python 3.6+ installed.
 
 ### Using pip
 
@@ -59,7 +59,7 @@ pip install ai-economist
 2. Create a new conda environment (named "ai-economist" below - replace with anything else) and activate it
 
     ```pyfunctiontypecomment
-    conda create --name ai-economist python=3.7
+    conda create --name ai-economist python=3.6
     conda activate ai-economist
     ```
 
