@@ -9,7 +9,7 @@ with open('requirements.txt') as f:
 setuptools.setup(
     name="ai-economist",
     version="1.0",
-    author="Stephan Zheng",
+    author="Stephan Zheng, Alex Trott, Sunil Srinivasa",
     author_email="stephan.zheng@salesforce.com",
     description="Economics Simulator",
     long_description=long_description,
