@@ -26,9 +26,14 @@ class BaseEnvironment(ABC):
     Base Environment class. Should be used as the parent class for Scenario classes.
     Instantiates world, agent, and component objects.
 
-    Provides gym-style API for resetting and stepping:
+    Provides Gym-style API for resetting and stepping:
         obs                  <-- env.reset()
         obs, rew, done, info <-- env.step(actions)
+
+    Also provides Gym-style API for controlling random behavior:
+        env.seed(seed) # Sets numpy and built-in RNG seeds to seed
+
+    Reference: OpenAI Gym [https://github.com/openai/gym]
 
     Environments in this framework are instances of Scenario classes (which are built
     as extensions of BaseEnvironment). A Scenario must implement the following
