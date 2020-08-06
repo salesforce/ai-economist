@@ -8,10 +8,10 @@ with open('requirements.txt') as f:
 
 setuptools.setup(
     name="ai-economist",
-    version="1.0.0",
-    author="Stephan Zheng",
+    version="1.0",
+    author="Stephan Zheng, Alex Trott, Sunil Srinivasa",
     author_email="stephan.zheng@salesforce.com",
-    description="Economics+RL Simulator",
+    description="Foundation: An Economics Simulation Framework",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/salesforce/ai-economist",
