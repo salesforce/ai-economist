@@ -11,7 +11,7 @@ setuptools.setup(
     version="1.0",
     author="Stephan Zheng, Alex Trott, Sunil Srinivasa",
     author_email="stephan.zheng@salesforce.com",
-    description="Economics Simulator",
+    description="Foundation: An Economics Simulation Framework",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/salesforce/ai-economist",
