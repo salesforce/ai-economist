@@ -38,7 +38,7 @@ If you're interested in extending this framework, discussing machine learning fo
 
 ## Installation Instructions
 
-To get started, you'll need to have Python 3.7+ installed.
+To get started, you'll need to have Python 3.6+ installed.
 
 ### Using pip
 
@@ -59,7 +59,7 @@ pip install ai-economist
 2. Create a new conda environment (named "ai-economist" below - replace with anything else) and activate it
 
     ```pyfunctiontypecomment
-    conda create --name ai-economist python=3.7
+    conda create --name ai-economist python=3.6
     conda activate ai-economist
     ```
 
@@ -101,8 +101,8 @@ python -c "import ai_economist"
 
 To familiarize yourself with Foundation, check out the tutorials in the `tutorials` folder. You can run these notebooks interactively in your browser on Google Colab.
 
-- [tutorials/economic_simulation_basic.ipynb](https://www.github.com/salesforce/ai-economist/blob/master/tutorials/economic_simulation_basic.ipynb): Shows how to interact with and visualize the simulation.
-- [tutorials/economic_simulation_advanced.ipynb](https://www.github.com/salesforce/ai-economist/blob/master/tutorials/economic_simulation_advanced.ipynb): Explains how Foundation is built up using composable and flexible building blocks.
+- [tutorials/economic_simulation_basic.ipynb](https://www.github.com/salesforce/ai-economist/blob/master/tutorials/economic_simulation_basic.ipynb) ([Try this on Colab](http://colab.research.google.com/github/salesforce/ai-economist/blob/master/tutorials/economic_simulation_basic.ipynb)!): Shows how to interact with and visualize the simulation.
+- [tutorials/economic_simulation_advanced.ipynb](https://www.github.com/salesforce/ai-economist/blob/master/tutorials/economic_simulation_advanced.ipynb) ([Try this on Colab](http://colab.research.google.com/github/salesforce/ai-economist/blob/master/tutorials/economic_simulation_advanced.ipynb)!): Explains how Foundation is built up using composable and flexible building blocks.
 
 To run these notebooks *locally*, you need [Jupyter](https://jupyter.org). See [https://jupyter.readthedocs.io/en/latest/install.html](https://jupyter.readthedocs.io/en/latest/install.html) for installation instructions and [(https://jupyter-notebook.readthedocs.io/en/stable/](https://jupyter-notebook.readthedocs.io/en/stable/) for examples of how to work with Jupyter.
 
