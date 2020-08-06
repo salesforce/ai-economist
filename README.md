@@ -127,7 +127,7 @@ The code repository is organized into the following components:
 
 ## Changelog
 
-Current version: v1.0.0: initial release.
+Current version: v1.0: initial release.
 
 For the complete release history, see [CHANGELOG.md](https://www.github.com/salesforce/ai-economist/blob/master/CHANGELOG.md).
 
