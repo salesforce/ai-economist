@@ -4,6 +4,7 @@
 # For full license text, see the LICENSE file in the repo root
 # or https://opensource.org/licenses/BSD-3-Clause
 
+import random
 from abc import ABC, abstractmethod
 from copy import deepcopy
 
@@ -25,9 +26,14 @@ class BaseEnvironment(ABC):
     Base Environment class. Should be used as the parent class for Scenario classes.
     Instantiates world, agent, and component objects.
 
-    Provides gym-style API for resetting and stepping:
+    Provides Gym-style API for resetting and stepping:
         obs                  <-- env.reset()
         obs, rew, done, info <-- env.step(actions)
+
+    Also provides Gym-style API for controlling random behavior:
+        env.seed(seed) # Sets numpy and built-in RNG seeds to seed
+
+    Reference: OpenAI Gym [https://github.com/openai/gym]
 
     Environments in this framework are instances of Scenario classes (which are built
     as extensions of BaseEnvironment). A Scenario must implement the following
@@ -73,7 +79,7 @@ class BaseEnvironment(ABC):
     accessed via registries. See top example.
 
     Example:
-        import economic sim
+        from ai_economist import foundation
         # foundation.scenarios  <-- Scenario class registry
         # foundation.components <-- Component class registry
         # foundation.agents     <-- Agent class registry
@@ -89,7 +95,7 @@ class BaseEnvironment(ABC):
         GatherComponentClass = foundation.components.get("Gather")
 
     Example:
-        import foundation
+        from ai_economist import foundation
         from ai_economist.foundation.base.base_env import BaseEnvironment
 
         ScenarioClass = foundation.scenarios.get(...)
@@ -154,6 +160,9 @@ class BaseEnvironment(ABC):
             (the default), the world state will be included in the dense log for
             timesteps where t is a multiple of 50.
             Note: More frequent world snapshots increase the dense log memory footprint.
+        seed (int, optional): If provided, sets the numpy and built-in random number
+            generator seeds to seed. You can control the seed after env construction
+            using the 'seed' method.
     """
 
     # The name associated with this Scenario class (must be unique)
@@ -179,6 +188,7 @@ class BaseEnvironment(ABC):
         allow_observation_scaling=True,
         dense_log_frequency=None,
         world_dense_log_frequency=50,
+        seed=None,
     ):
 
         # Make sure a name was declared by child class
@@ -264,6 +274,10 @@ class BaseEnvironment(ABC):
         # How often (in timesteps) to snapshot the world map when creating the denselog
         self._world_dense_log_frequency = int(world_dense_log_frequency)
         assert self._world_dense_log_frequency >= 1
+
+        # Seed control
+        if seed is not None:
+            self.seed(seed)
 
         # Initialize the set of entities used in the game that's being created.
         # Coin and Labor are always included.
@@ -446,6 +460,24 @@ class BaseEnvironment(ABC):
             metrics = env.previous_episode_metrics
         """
         return self._last_ep_replay_log
+
+    # Seed control
+    # -----------------
+
+    @staticmethod
+    def seed(seed):
+        """Sets the numpy and built-in random number generator seed.
+
+        Args:
+            seed (int, float): Seed value to use. Must be > 0. Converted to int
+                internally if provided value is a float.
+        """
+        assert isinstance(seed, (int, float))
+        seed = int(seed)
+        assert seed > 0
+
+        np.random.seed(seed)
+        random.seed(seed)
 
     # Getters & Setters
     # -----------------
