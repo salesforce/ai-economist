@@ -17,4 +17,3 @@
 # Release 1.1.1 (2020-08-06)
 
 - Added some fixed layout maps
-- Added git clone to the colab notebooks in order to have access to the ai-economist project files.
