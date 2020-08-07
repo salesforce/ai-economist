@@ -16,6 +16,9 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/salesforce/ai-economist",
     packages=setuptools.find_packages(),
+    package_data={
+        "ai_economist": ["foundation/scenarios/simple_wood_and_stone/map_txt/*.txt"]},
+    include_package_data=True,
     install_requires=requirements,
     classifiers=[
         "Programming Language :: Python :: 3",
