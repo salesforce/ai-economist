@@ -12,4 +12,8 @@
   
 # Release 1.1 (2020-08-06)
 
-## Added links for the tutorials to run on Colab and set python version from 3.7 -> 3.6
+- Added links for the tutorials to run on Colab and set python version from 3.7 -> 3.6
+
+# Release 1.1.1 (2020-08-06)
+
+- Added some fixed layout maps

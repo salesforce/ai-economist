@@ -8,7 +8,7 @@ with open('requirements.txt') as f:
 
 setuptools.setup(
     name="ai-economist",
-    version="1.1",
+    version="1.1.1",
     author="Stephan Zheng, Alex Trott, Sunil Srinivasa",
     author_email="stephan.zheng@salesforce.com",
     description="Foundation: An Economics Simulation Framework",
@@ -16,6 +16,9 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/salesforce/ai-economist",
     packages=setuptools.find_packages(),
+    package_data={
+        "ai_economist": ["foundation/scenarios/simple_wood_and_stone/map_txt/*.txt"]},
+    include_package_data=True,
     install_requires=requirements,
     classifiers=[
         "Programming Language :: Python :: 3",
