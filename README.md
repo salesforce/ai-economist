@@ -23,6 +23,8 @@ If you use this code in your research, please cite us using this BibTeX entry:
 }
 ```
 
+Please see our [Simulation Card](https://www.github.com/salesforce/ai-economist/Simulation_Card_Foundation_Economic_Simulation_Framework.pdf) for a review of the intended use and ethical review of our framework.
+
 For more information and context, check out:
 
 - [The AI Economist website](https://www.einstein.ai/the-ai-economist)
