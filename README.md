@@ -29,6 +29,10 @@ For more information and context, check out:
 - [Blog: The AI Economist: Improving Equality and Productivity with AI-Driven Tax Policies](https://blog.einstein.ai/the-ai-economist/)
 - [Blog: The AI Economist moonshot](https://blog.einstein.ai/the-ai-economist-moonshot/)
 
+## Simulation Card: Ethics Review and Intended Use
+
+Please see our [Simulation Card](https://www.github.com/salesforce/ai-economist/Simulation_Card_Foundation_Economic_Simulation_Framework.pdf) for a review of the intended use and ethical review of our framework.
+
 ## Join us on Slack
 
 If you're interested in extending this framework, discussing machine learning for economics, and collaborating on research project:
