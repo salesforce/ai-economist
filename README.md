@@ -31,7 +31,7 @@ For more information and context, check out:
 
 ## Simulation Card: Ethics Review and Intended Use
 
-Please see our [Simulation Card](https://www.github.com/salesforce/ai-economist/Simulation_Card_Foundation_Economic_Simulation_Framework.pdf) for a review of the intended use and ethical review of our framework.
+Please see our [Simulation Card](https://www.github.com/salesforce/ai-economist/blob/master/Simulation_Card_Foundation_Economic_Simulation_Framework.pdf) for a review of the intended use and ethical review of our framework.
 
 ## Join us on Slack
 
