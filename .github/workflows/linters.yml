@@ -21,7 +21,7 @@ jobs:
         # INSTALLS
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        echo "::set-env name=PYTHONPATH::/home/runner/work/ai-economist-opensource/ai-economist-opensource/"
+        echo "PYTHONPATH=/home/runner/work/ai-economist-opensource/ai-economist-opensource/" >> $GITHUB_ENV
 
     - name: Sort imports with isort
       run: |
