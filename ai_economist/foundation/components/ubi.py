@@ -47,7 +47,7 @@ class UBI(BaseComponent):
             self.amt_min, self.amt_max + self.amt_disc, self.amt_disc
         )
         self.disc_amts = self.disc_amts[self.disc_amts <= self.amt_max]
-        assert len(self.disc_amts) > 1 or self.disable_taxes
+        assert len(self.disc_amts) > 1 
         
         # Number of discrete options for the amount of each UBI payment
         self.n_disc_amts = len(self.disc_amts)
@@ -61,6 +61,9 @@ class UBI(BaseComponent):
 
         # Record of the amount of UBI payment in the previous period
         self.last_basic_income_level = None
+
+        # Record of UBI payments at each time step (for dense log)
+        self.ubi_payments = []
 
         # How many timesteps a "year" lasts (period over which UBI is paid once)
         self.period = int(period)
@@ -96,6 +99,7 @@ class UBI(BaseComponent):
 
         # record UBI level
         self.last_basic_income_level = self.basic_income_level
+        self.ubi_payments.append(dict(ubi_amt=self.basic_income_level))
     """
     Required methods for implementing components
     --------------------------------------------
@@ -136,6 +140,8 @@ class UBI(BaseComponent):
         if self.ubi_cycle_pos == self.period:      
             self.pay_ubi()
             self.ubi_cycle_pos = 0
+        else:
+            self.ubi_payments.append([])
         self.ubi_cycle_pos += 1
 
     def generate_observations(self):
@@ -173,9 +179,34 @@ class UBI(BaseComponent):
 
         return obs
 
-    def generate_masks(self, completions=0):
-        """Passive component. Masks are empty."""
-        masks = {}
+
+    def generate_masks(self, completions=0): # TODO: SHL
+        """
+        See base_component.py for detailed description.
+        Masks only apply to the planner.
+        All UBI actions are masked (so, only NO-OPs can be sampled) on all timesteps
+        except when self.ubi_cycle_pos==1 (meaning a new UBI period is starting).
+        """
+
+        if self._planner_masks is None:
+            masks = super().generate_masks(completions=completions)
+            self._planner_masks = dict(
+                new_ubi=deepcopy(masks[self.world.planner.idx]),
+                zeros={
+                    k: np.zeros_like(v)
+                    for k, v in masks[self.world.planner.idx].items()
+                },
+            )
+
+        # No need to recompute. Use the cached masks.
+        masks = dict()
+        if self.ubi_cycle_pos != 1:
+            # Apply zero masks for any timestep where UBI
+            # is not going to be updated.
+            masks[self.world.planner.idx] = self._planner_masks["zeros"]
+        else:
+            masks[self.world.planner.idx] = self._planner_masks["new_ubi"]
+
         return masks
 
     # For non-required customization
@@ -190,5 +221,16 @@ class UBI(BaseComponent):
         self.basic_income_level = 0
         self.last_basic_income_level = 0
         self.ubi_cycle_pos = 1
-        
-        
+        self.ubi_payments = []
+
+    def get_dense_log(self):
+        """
+        Log UBI payments.
+        Returns:
+            ubi_payments (list): A list of UBI payments. Each entry corresponds to a single
+                timestep. Entries are empty except for timesteps where a UBI period
+                ended and UBI was distributed. For those timesteps, each entry
+                contains the UBI payment amount.
+                Returns None if taxes are disabled.
+        """
+        return self.ubi_payments
