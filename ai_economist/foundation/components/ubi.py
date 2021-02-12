@@ -58,7 +58,9 @@ class UBI(BaseComponent):
         
         # Amount of coin to give to each agent
         self.basic_income_level = self.disc_amts[self.curr_amt_index]
-        
+
+        # Record of the amount of UBI payment in the previous period
+        self.last_basic_income_level = None
 
         # How many timesteps a "year" lasts (period over which UBI is paid once)
         self.period = int(period)
@@ -85,12 +87,15 @@ class UBI(BaseComponent):
     def pay_ubi(self):
         """Pay UBI from the planner agent to each mobile agent"""
         world = self.world
-
+        
         # pay UBI to mobile agents
         for agent in world.agents:
             agent.state["inventory"]["Coin"] += self.basic_income_level
         # remove UBI costs from planner agent
         world.planner.state['inventory']['Coin'] -= self.basic_income_level * len(world.agents)
+
+        # record UBI level
+        self.last_basic_income_level = self.basic_income_level
     """
     Required methods for implementing components
     --------------------------------------------
@@ -134,11 +139,56 @@ class UBI(BaseComponent):
         self.ubi_cycle_pos += 1
 
     def generate_observations(self):
-        """This component does not add any observations."""
-        obs = {}
+        """
+        See base_component.py for detailed description.
+        Agents observe where in the UBI period cycle they are, the
+        last period's UBI amount, and the current period's UBI amount.
+        The planner observes the same information.
+        """
+        is_ubi_day = float(self.ubi_cycle_pos >= self.period)
+        is_first_day = float(self.ubi_cycle_pos == 1)
+        ubi_phase = self.ubi_cycle_pos / self.period
+
+        obs = dict()
+
+        obs[self.world.planner.idx] = dict(
+            is_ubi_day=is_ubi_day,
+            is_first_day=is_first_day,
+            ubi_phase=ubi_phase,
+            curr_amt=self.basic_income_level,
+            last_amt=self.last_basic_income_level,
+        )
+
+        for agent in self.world.agents:
+            i = agent.idx
+            k = str(i)
+
+            obs[k] = dict(
+                is_ubi_day=is_ubi_day,
+                is_first_day=is_first_day,
+                ubi_phase=ubi_phase,
+                curr_amt=self.basic_income_level,
+                last_amt=self.last_basic_income_level,
+            )
+
         return obs
 
     def generate_masks(self, completions=0):
         """Passive component. Masks are empty."""
         masks = {}
         return masks
+
+    # For non-required customization
+    # ------------------------------
+
+    def additional_reset_steps(self):
+        """
+        See base_component.py for detailed description.
+        Reset trackers.
+        """
+        self.curr_amt_index = 0
+        self.basic_income_level = 0
+        self.last_basic_income_level = 0
+        self.ubi_cycle_pos = 1
+        
+        
