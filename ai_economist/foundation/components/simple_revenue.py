@@ -385,7 +385,7 @@ class SimpleRevenue(BaseComponent):
         self.taxes.append(tax_dict)
 
         # Add revenue to planner agent's coin endowment
-        world.planner.state['inventory']['Coin'] += net_tax_revenue
+        self.world.planner.state['inventory']['Coin'] += net_tax_revenue
 
         # Record agent coin endowments at the current time step
         for agent in self.world.agents:

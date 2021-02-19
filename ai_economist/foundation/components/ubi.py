@@ -72,6 +72,8 @@ class UBI(BaseComponent):
         # Track the UBI payment cycle
         self.ubi_cycle_pos = 1
 
+        # Cache planner masks
+        self._planner_masks = None
 
     def set_new_period_amt_model(self):
         """Update UBI payment amount using actions from the planner agent."""
@@ -222,6 +224,7 @@ class UBI(BaseComponent):
         self.last_basic_income_level = 0
         self.ubi_cycle_pos = 1
         self.ubi_payments = []
+        self._planner_masks = None
 
     def get_dense_log(self):
         """
