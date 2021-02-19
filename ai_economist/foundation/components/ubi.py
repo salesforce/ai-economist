@@ -82,8 +82,10 @@ class UBI(BaseComponent):
         planner_action = self.world.planner.get_component_action(
             self.name, "UBI_payment_amount"
         )
+        # When NO-OP, set UBI as 0 (cannot do nothing because agent may 
+        # not be able to afford the same UBI rate as last time)
         if planner_action == 0:
-            pass
+            self.curr_amt_index = 0
         elif planner_action <= self.n_disc_amts:
             self.curr_amt_index = int(planner_action - 1)
         else:
@@ -193,21 +195,22 @@ class UBI(BaseComponent):
         if self._planner_masks is None:
             masks = super().generate_masks(completions=completions)
             self._planner_masks = dict(
-                new_ubi=deepcopy(masks[self.world.planner.idx]),
                 zeros={
                     k: np.zeros_like(v)
                     for k, v in masks[self.world.planner.idx].items()
                 },
             )
-
-        # No need to recompute. Use the cached masks.
+        
+        # No need to recompute the zeros mask. Use the cached masks.
         masks = dict()
         if self.ubi_cycle_pos != 1:
             # Apply zero masks for any timestep where UBI
             # is not going to be updated.
             masks[self.world.planner.idx] = self._planner_masks["zeros"]
         else:
-            masks[self.world.planner.idx] = self._planner_masks["new_ubi"]
+            # Mask possible UBI amounts when setting new UBI 
+            planner_coin = self.world.planner.state['inventory']['Coin']
+            masks[self.world.planner.idx] = {'UBI_payment_amount': (self.disc_amts*len(self.world.agents) <= planner_coin).astype(int)}
 
         return masks
 
