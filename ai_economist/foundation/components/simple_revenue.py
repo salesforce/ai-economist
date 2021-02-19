@@ -1,4 +1,3 @@
-
 from copy import deepcopy
 
 import numpy as np
@@ -7,12 +6,15 @@ from ai_economist.foundation.base.base_component import (
     BaseComponent,
     component_registry,
 )
+from ai_economist.foundation.components.utils import (
+    annealed_tax_limit,
+    annealed_tax_mask,
+)
+
 
 @component_registry.add
 class SimpleRevenue(BaseComponent):
-    """Periodically collect income taxes from agents and add revenue to the planner's coin.
-    Note:
-        If this component is used, it should always be the last component in the order!
+    """Periodically collect income taxes and add revenue to the planner's coin.
     Args:
         disable_taxes (bool): Whether to disable any tax collection, effectively
             enforcing that tax rates are always 0. Useful for removing taxes without
@@ -338,7 +340,7 @@ class SimpleRevenue(BaseComponent):
         return np.sum(bin_taxes)
 
     def enact_taxes(self):
-        """Calculate period income & tax burden. Collect taxes and add to planner's coin endowment."""
+        """Calculate period income & tax burden. Collect and add to planner's coin."""
         net_tax_revenue = 0
         tax_dict = dict(
             schedule=np.array(self.curr_marginal_rates),
@@ -385,12 +387,12 @@ class SimpleRevenue(BaseComponent):
         self.taxes.append(tax_dict)
 
         # Add revenue to planner agent's coin endowment
-        self.world.planner.state['inventory']['Coin'] += net_tax_revenue
+        self.world.planner.state["inventory"]["Coin"] += net_tax_revenue
 
         # Record agent coin endowments at the current time step
         for agent in self.world.agents:
             self.last_coin[agent.idx] = float(agent.total_endowment("Coin"))
-        
+
         # Pre-compute some things that will be useful for generating observations
         self._last_income_obs = np.array(self.last_income) / self.period
         self._last_income_obs_sorted = self._last_income_obs[
@@ -437,7 +439,7 @@ class SimpleRevenue(BaseComponent):
 
             self._curr_rates_obs = np.array(self.curr_marginal_rates)
 
-        # 2. On the last day of the tax period: Get $-taxes AND update planner endowment.
+        # 2. On the last day of the tax period: Get $-taxes AND update planner coin.
         if self.tax_cycle_pos >= self.period:
             self.enact_taxes()
             self.tax_cycle_pos = 0
