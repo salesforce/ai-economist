@@ -174,7 +174,7 @@ class LayoutFromFile(BaseEnvironment):
 
         self.fixed_four_skill_and_loc = bool(fixed_four_skill_and_loc)
         if self.fixed_four_skill_and_loc:
-            assert self.n_agents == 5
+            assert self.n_agents == 4
             bm = self.get_component("Build")
             assert bm.skill_dist == "pareto"
             pmsm = bm.payment_max_skill_multiplier
