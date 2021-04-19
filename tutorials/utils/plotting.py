@@ -12,7 +12,7 @@ from ai_economist.foundation import landmarks, resources
 
 def plot_map(maps, locs, ax=None, cmap_order=None):
     world_size = np.array(maps.get("Wood")).shape
-    max_health = {"Wood": 1, "Stone": 1, "House": 1}
+    max_health = {"Wood": 1, "Stone": 1, "House": 1, "Widget": 1}
     n_agents = len(locs)
 
     if ax is None:
