@@ -62,7 +62,7 @@ class LayoutFromFile(BaseEnvironment):
 
     name = "layout_from_file/simple_wood_and_stone"
     agent_subclasses = ["BasicMobileAgent", "BasicPlanner"]
-    required_entities = ["Wood", "Stone", "Water"]
+    required_entities = ["Wood", "Stone", "Water", "Widget"]
 
     def __init__(
         self,
@@ -101,7 +101,7 @@ class LayoutFromFile(BaseEnvironment):
             self.env_layout = self.env_layout_string.split(";")
 
         # Convert the layout to landmark maps
-        landmark_lookup = {"W": "Wood", "S": "Stone", "@": "Water"}
+        landmark_lookup = {"W": "Wood", "S": "Stone", "@": "Water", "F": "Widget"}
         self._source_maps = {
             r: np.zeros(self.world_size) for r in landmark_lookup.values()
         }
@@ -288,7 +288,7 @@ class LayoutFromFile(BaseEnvironment):
         self.world.maps.clear()
         for landmark, landmark_map in self._source_maps.items():
             self.world.maps.set(landmark, landmark_map)
-            if landmark in ["Stone", "Wood"]:
+            if landmark in ["Stone", "Wood", "Widget"]:
                 self.world.maps.set(landmark + "SourceBlock", landmark_map)
 
     def reset_agent_states(self):
@@ -339,7 +339,7 @@ class LayoutFromFile(BaseEnvironment):
         regeneration.
         """
 
-        resources = ["Wood", "Stone"]
+        resources = ["Wood", "Stone", "Widget"]
 
         for resource in resources:
             d = 1 + (2 * self.layout_specs[resource]["regen_halfwidth"])
