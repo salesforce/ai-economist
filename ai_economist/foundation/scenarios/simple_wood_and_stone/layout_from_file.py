@@ -70,7 +70,7 @@ class LayoutFromFile(BaseEnvironment):
         planner_gets_spatial_info=True,
         full_observability=False,
         mobile_agent_observation_range=5,
-        env_layout_file="quadrant_25x25_20each_30clump_no_water.txt",
+        env_layout_file="quadrant_25x25_20each_30clump.txt",
         resource_regen_prob=0.01,
         fixed_four_skill_and_loc=False,
         starting_agent_coin=0,
