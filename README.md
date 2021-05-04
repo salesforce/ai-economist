@@ -12,6 +12,15 @@ This simulation can be used in conjunction with reinforcement learning to learn 
 **[The AI Economist: Improving Equality and Productivity with AI-Driven Tax Policies](https://arxiv.org/abs/2004.13332)**,
 *Stephan Zheng, Alexander Trott, Sunil Srinivasa, Nikhil Naik, Melvin Gruesbeck, David C. Parkes, Richard Socher.*
 
+If you use this code in your research, please cite us using this BibTeX entry:
+
+```
+@misc{2004.13332,
+  Author = {Stephan Zheng, Alexander Trott, Sunil Srinivasa, Nikhil Naik, Melvin Gruesbeck, David C. Parkes, Richard Socher},
+  Title = {The AI Economist: Improving Equality and Productivity with AI-Driven Tax Policies},
+  Year = {2020},
+  Eprint = {arXiv:2004.13332},
+}
 ```
 
 For more information and context, check out:
