@@ -29,7 +29,7 @@ pip install ai-economist
 1. Clone this repository to your local machine:
 
     ```
-    git clone www.github.com/salesforce/ai-economist
+    git clone www.github.com/swarnabha13/ai-economist
     ```
 
 2. Create a new conda environment (named "ai-economist" below - replace with anything else) and activate it
