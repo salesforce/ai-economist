@@ -83,3 +83,10 @@ The code repository is organized into the following components:
 | [entities](https://www.github.com/salesforce/ai-economist/blob/master/ai_economist/foundation/entities) | Endogenous and exogenous components of the environment. Endogenous entities include labor, while exogenous entity includes landmarks (such as Water and Grass) and collectible Resources (such as Wood and Stone). |
 | [components](https://www.github.com/salesforce/ai-economist/blob/master/ai_economist/foundation/components) | Components are used to add some particular dynamics to an environment. They also add action spaces that define how Agents can interact with the environment via the Component. |
 | [scenarios](https://www.github.com/salesforce/ai-economist/blob/master/ai_economist/foundation/scenarios) | Scenarios compose Components to define the dynamics of the world. It also computes rewards and exposes state for visualization. |
+
+
+## Simulation Notebooks
+
+- [economic_simulation_basic.ipynb](https://github.com/swarnabha13/ai-economist/blob/master/economic_simulation_basic.ipynb)
+- [AI_Economist_RL.ipynb](https://github.com/swarnabha13/ai-economist/blob/master/AI_Economist_RL.ipynb)
+- [SARSA_Test.ipynb](https://github.com/swarnabha13/ai-economist/blob/master/SARSA_Test.ipynb)
