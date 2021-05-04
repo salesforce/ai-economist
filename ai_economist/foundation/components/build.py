@@ -61,7 +61,7 @@ class Build(BaseComponent):
         assert self.build_labor >= 0
 
         self.skill_dist = skill_dist.lower()
-        assert self.skill_dist in ["none", "pareto", "lognormal"]
+        assert self.skill_dist in ["none", "pareto", "lognormal", "beta"]
 
         self.sampled_skills = {}
 
@@ -237,6 +237,9 @@ class Build(BaseComponent):
             if self.skill_dist == "none":
                 sampled_skill = 1
                 pay_rate = 1
+            elif self.skill_dist == "beta":
+                sampled_skill = np.random.beta(4, 4)
+                pay_rate = np.minimum(PMSM, (PMSM - 1) * sampled_skill + 1)
             elif self.skill_dist == "pareto":
                 sampled_skill = np.random.pareto(4)
                 pay_rate = np.minimum(PMSM, (PMSM - 1) * sampled_skill + 1)

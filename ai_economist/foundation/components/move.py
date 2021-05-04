@@ -55,7 +55,7 @@ class Gather(BaseComponent):
         assert self.collect_labor >= 0
 
         self.skill_dist = skill_dist.lower()
-        assert self.skill_dist in ["none", "pareto", "lognormal"]
+        assert self.skill_dist in ["none", "pareto", "lognormal", "beta"]
 
         self.gathers = []
 
@@ -199,6 +199,8 @@ class Gather(BaseComponent):
         for agent in self.world.agents:
             if self.skill_dist == "none":
                 bonus_rate = 0.0
+            elif self.skill_dist == "beta":
+                bonus_rate = np.minimum(2, np.random.beta(4,4)) / 2
             elif self.skill_dist == "pareto":
                 bonus_rate = np.minimum(2, np.random.pareto(3)) / 2
             elif self.skill_dist == "lognormal":
