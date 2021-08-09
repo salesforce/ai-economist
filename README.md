@@ -73,7 +73,7 @@ pip install ai-economist
 2. Create a new conda environment (named "ai-economist" below - replace with anything else) and activate it
 
   ```pyfunctiontypecomment
-   conda create --name ai-economist python=3.7
+   conda create --name ai-economist python=3.7 --yes
    conda activate ai-economist
    ```
 

@@ -18,8 +18,9 @@
 
 - Added some fixed layout maps
 
-# Release 1.2 (2021-09-09)
+# Release 1.2.2 (2021-09-09)
 
 - Added the COVID-19 and the economy - related scenario and components.
 - Added the COVID-19 simulation card.
+- Added real world data, model constants and fitted parameters
 
