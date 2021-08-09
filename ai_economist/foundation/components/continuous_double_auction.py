@@ -67,9 +67,9 @@ class ContinuousDoubleAuction(BaseComponent):
         assert self.max_num_orders >= 1
 
         # The labor cost associated with creating a bid or ask order
+
         self.order_labor = float(order_labor)
-        if self.order_labor < 0:
-            self.order_labor = 0.0
+        self.order_labor = max(self.order_labor, 0.0)
 
         # Each collectible resource in the world can be traded via this component
         self.commodities = [

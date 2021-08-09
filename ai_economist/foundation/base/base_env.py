@@ -188,6 +188,7 @@ class BaseEnvironment(ABC):
         allow_observation_scaling=True,
         dense_log_frequency=None,
         world_dense_log_frequency=50,
+        collate_agent_step_and_reset_data=False,
         seed=None,
     ):
 
@@ -241,7 +242,7 @@ class BaseEnvironment(ABC):
                 return key_is_str and val_is_dict
             return False
 
-        assert all([spec_is_valid(component) for component in components])
+        assert all(spec_is_valid(component) for component in components)
 
         self._episode_length = int(episode_length)
         assert self._episode_length >= 1
@@ -340,8 +341,6 @@ class BaseEnvironment(ABC):
 
         self._agent_lookup = {str(agent.idx): agent for agent in self.all_agents}
 
-        self.timestep = 0
-
         self._completions = 0
 
         self._last_ep_metrics = None
@@ -360,6 +359,10 @@ class BaseEnvironment(ABC):
         self._last_ep_replay_log = self.replay_log.copy()
 
         self._packagers = {}
+
+        # To collate all the agents ('0', '1', ...) data during reset and step
+        # into a single agent with index 'a'
+        self.collate_agent_step_and_reset_data = collate_agent_step_and_reset_data
 
     def _register_entities(self, entities):
         for entity in entities:
@@ -618,7 +621,10 @@ class BaseEnvironment(ABC):
             return d
 
         # Initialize empty observations
-        obs = {str(agent.idx): {} for agent in self.all_agents}
+        if self.collate_agent_step_and_reset_data:
+            obs = {"a": {}, "p": {}}
+        else:
+            obs = {str(agent.idx): {} for agent in self.all_agents}
         agent_wise_planner_obs = {
             "p" + str(agent.idx): {} for agent in self.world.agents
         }
@@ -629,7 +635,15 @@ class BaseEnvironment(ABC):
         for idx, o in world_obs.items():
             if idx in obs:
                 obs[idx].update({"world-" + k: v for k, v in o.items()})
-                obs[idx]["time"] = [self.timestep / time_scale]
+                if self.collate_agent_step_and_reset_data and idx == "a":
+                    obs[idx]["time"] = np.array(
+                        [
+                            self.world.timestep / time_scale
+                            for _ in range(self.world.n_agents)
+                        ]
+                    )
+                else:
+                    obs[idx]["time"] = [self.world.timestep / time_scale]
             elif idx in agent_wise_planner_obs:
                 agent_wise_planner_obs[idx].update(
                     {"world-" + k: v for k, v in o.items()}
@@ -679,7 +693,10 @@ class BaseEnvironment(ABC):
         return obs
 
     def _generate_masks(self, flatten_masks=True):
-        masks = {agent.idx: {} for agent in self.all_agents}
+        if self.collate_agent_step_and_reset_data:
+            masks = {"a": {}, "p": {}}
+        else:
+            masks = {agent.idx: {} for agent in self.all_agents}
         for component in self._components:
             # Use the component's generate_masks method to get action masks
             component_masks = component.generate_masks(completions=self._completions)
@@ -694,16 +711,37 @@ class BaseEnvironment(ABC):
                     masks[idx][component.name] = mask
 
         if flatten_masks:
+            if self.collate_agent_step_and_reset_data:
+                flattened_masks = {}
+                for agent_id in masks.keys():
+                    if agent_id == "a":
+                        multi_action_mode = self.multi_action_mode_agents
+                        no_op_mask = np.ones((1, self.n_agents))
+                    elif agent_id == "p":
+                        multi_action_mode = self.multi_action_mode_planner
+                        no_op_mask = [1]
+                    mask_dict = masks[agent_id]
+                    list_of_masks = []
+                    if not multi_action_mode:
+                        list_of_masks.append(no_op_mask)
+                    for m in mask_dict.keys():
+                        if multi_action_mode:
+                            list_of_masks.append(no_op_mask)
+                        list_of_masks.append(mask_dict[m])
+                    flattened_masks[agent_id] = np.concatenate(
+                        list_of_masks, axis=0
+                    ).astype(np.float32)
+                return flattened_masks
             return {
                 str(agent.idx): agent.flatten_masks(masks[agent.idx])
                 for agent in self.all_agents
             }
         return {
-            str(agent.idx): {
+            str(agent_idx): {
                 k: np.array(v, dtype=np.uint8).tolist()
-                for k, v in masks[agent.idx].items()
+                for k, v in masks[agent_idx].items()
             }
-            for agent in self.all_agents
+            for agent_idx in list(masks.keys())
         }
 
     def _generate_rewards(self):
@@ -763,6 +801,42 @@ class BaseEnvironment(ABC):
                 raise TypeError
 
         self._last_ep_dense_log = recursive_cast(self._dense_log)
+
+    def collate_agent_obs(self, obs):
+        # Collating observations from all agents
+        if "a" in obs:  # already collated!
+            return obs
+        num_agents = len(obs.keys()) - 1
+        obs["a"] = {}
+        for key in obs["0"].keys():
+            obs["a"][key] = np.stack(
+                [obs[str(agent_idx)][key] for agent_idx in range(num_agents)], axis=-1
+            )
+        for agent_idx in range(num_agents):
+            del obs[str(agent_idx)]
+        return obs
+
+    def collate_agent_rew(self, rew):
+        # Collating rewards from all agents
+        if "a" in rew:  # already collated!
+            return rew
+        num_agents = len(rew.keys()) - 1
+        rew["a"] = []
+        for agent_idx in range(num_agents):
+            rew["a"] += [rew[str(agent_idx)]]
+            del rew[str(agent_idx)]
+        return rew
+
+    def collate_agent_info(self, info):
+        # Collating infos from all agents
+        if "a" in info:  # already collated!
+            return info
+        num_agents = len(info.keys()) - 1
+        info["a"] = {}
+        for agent_idx in range(num_agents):
+            info["a"][str(agent_idx)] = info[str(agent_idx)]
+            del info[str(agent_idx)]
+        return info
 
     def reset(self, seed_state=None, force_dense_logging=False):
         """
@@ -833,13 +907,16 @@ class BaseEnvironment(ABC):
             agent.reset_actions()
 
         # Reset the timestep counter
-        self.timestep = 0
+        self.world.timestep = 0
 
         # Produce observations
         obs = self._generate_observations(
             flatten_observations=self._flatten_observations,
             flatten_masks=self._flatten_masks,
         )
+
+        if self.collate_agent_step_and_reset_data:
+            obs = self.collate_agent_obs(obs)
 
         return obs
 
@@ -873,7 +950,7 @@ class BaseEnvironment(ABC):
             rew (dict): A dictionary of {"agent_idx": reward} with an entry for each
                 agent that also receives an observation. Each reward value is a scalar.
             done (dict): A dictionary with a single key "__all__". The associated
-                value is False when self.timestep < self.episode_length and True
+                value is False when self.world.timestep < self.episode_length and True
                 otherwise.
             info (dict): Placeholder dictionary with structure {"agent_idx": {}},
                 with the same keys as obs and rew.
@@ -901,7 +978,7 @@ class BaseEnvironment(ABC):
         if self._dense_log_this_episode:
             self._dense_log["world"].append(
                 deepcopy(self.world.maps.state_dict)
-                if (self.timestep % self._world_dense_log_frequency) == 0
+                if (self.world.timestep % self._world_dense_log_frequency) == 0
                 else {}
             )
             self._dense_log["states"].append(
@@ -914,7 +991,7 @@ class BaseEnvironment(ABC):
                 }
             )
 
-        self.timestep += 1
+        self.world.timestep += 1
 
         for component in self._components:
             component.component_step()
@@ -926,7 +1003,7 @@ class BaseEnvironment(ABC):
             flatten_masks=self._flatten_masks,
         )
         rew = self._generate_rewards()
-        done = {"__all__": self.timestep >= self._episode_length}
+        done = {"__all__": self.world.timestep >= self._episode_length}
         info = {k: {} for k in obs.keys()}
 
         if self._dense_log_this_episode:
@@ -940,6 +1017,11 @@ class BaseEnvironment(ABC):
         ]:  # Complete the dense log and stash it as well as the metrics
             self._finalize_logs()
             self._completions += 1
+
+        if self.collate_agent_step_and_reset_data:
+            obs = self.collate_agent_obs(obs)
+            rew = self.collate_agent_rew(rew)
+            info = self.collate_agent_info(info)
 
         return obs, rew, done, info
 

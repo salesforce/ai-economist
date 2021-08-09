@@ -99,17 +99,17 @@ class Maps:
         if self._accessibility_lookup:
             self._accessibility = np.ones(
                 shape=[len(self._accessibility_lookup), self.n_agents] + self.size,
-                dtype=np.bool,
+                dtype=bool,
             )
             self._net_accessibility = None
         else:
             self._accessibility = None
             self._net_accessibility = np.ones(
-                shape=[self.n_agents] + self.size, dtype=np.bool
+                shape=[self.n_agents] + self.size, dtype=bool
             )
 
         self._agent_locs = [None for _ in range(self.n_agents)]
-        self._unoccupied = np.ones(self.size, dtype=np.bool)
+        self._unoccupied = np.ones(self.size, dtype=bool)
 
     def clear(self, entity_name=None):
         """Clear resource and landmark maps."""
@@ -255,7 +255,7 @@ class Maps:
 
             self._accessibility[
                 self._accessibility_lookup[entity_name], :, r, c
-            ] = np.logical_or(o[r, c] == self._idx_array, o[r, c] == -1).astype(np.bool)
+            ] = np.logical_or(o[r, c] == self._idx_array, o[r, c] == -1).astype(bool)
             self._net_accessibility = None
 
         else:
@@ -301,7 +301,7 @@ class Maps:
     def accessibility(self):
         """Return a boolean map indicating which locations are accessible."""
         if self._net_accessibility is None:
-            self._net_accessibility = self._accessibility.prod(axis=0).astype(np.bool)
+            self._net_accessibility = self._accessibility.prod(axis=0).astype(bool)
         return self._net_accessibility
 
     @property
@@ -385,6 +385,8 @@ class World:
         ]
         self._planner = planner_class(multi_action_mode=self.multi_action_mode_planner)
 
+        self.timestep = 0
+
     @property
     def agents(self):
         """Return a list of the agent objects in the world (sorted by index)."""
@@ -440,7 +442,7 @@ class World:
     def agent_locs_are_valid(self):
         """Returns True if all agent locations comply with world semantics."""
         return all(
-            [self.is_location_accessible(*agent.loc, agent) for agent in self.agents]
+            self.is_location_accessible(*agent.loc, agent) for agent in self.agents
         )
 
     def set_agent_loc(self, agent, r, c):

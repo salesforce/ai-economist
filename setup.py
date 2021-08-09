@@ -8,7 +8,7 @@ with open('requirements.txt') as f:
 
 setuptools.setup(
     name="ai-economist",
-    version="1.1.1",
+    version="1.2",
     author="Stephan Zheng, Alex Trott, Sunil Srinivasa",
     author_email="stephan.zheng@salesforce.com",
     description="Foundation: An Economics Simulation Framework",
@@ -25,5 +25,5 @@ setuptools.setup(
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.7",
 )
