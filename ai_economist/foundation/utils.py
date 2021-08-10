@@ -65,8 +65,10 @@ def verify_activation_code():
 
     def validate_activation_code(code, msg=b"covid19 code activation"):
         filepath = os.path.abspath(
-            os.path.join(path_to_activation_code_dir,
-                         "scenarios/covid19/key_to_check_activation_code_against")
+            os.path.join(
+                path_to_activation_code_dir,
+                "scenarios/covid19/key_to_check_activation_code_against",
+            )
         )
         with open(filepath, "r") as fp:
             key_pair = RSA.import_key(fp.read())
