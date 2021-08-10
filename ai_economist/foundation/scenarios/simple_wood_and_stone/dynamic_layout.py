@@ -167,7 +167,7 @@ class Uniform(BaseEnvironment):
             "Wood": float(wood_clumpiness),
             "Stone": float(stone_clumpiness),
         }
-        assert all([0 <= v <= 1 for v in self.clumpiness.values()])
+        assert all(0 <= v <= 1 for v in self.clumpiness.values())
         #
         self.gradient_steepness = float(gradient_steepness)
         assert self.gradient_steepness >= 1.0
