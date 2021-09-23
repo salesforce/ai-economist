@@ -19,6 +19,7 @@ defusedxml==0.7.1
 entrypoints==0.3
 et-xmlfile==1.1.0
 flake8==3.9.2
+GPUtil==1.4.0
 idna==2.10
 iniconfig==1.1.1
 ipykernel==5.5.5
@@ -75,6 +76,7 @@ pyrsistent==0.17.3
 pytest==6.2.4
 python-dateutil==2.8.1
 pytz==2021.1
+pyyaml==5.4.1
 pyzmq==22.0.3
 qtconsole==5.1.0
 QtPy==1.9.0

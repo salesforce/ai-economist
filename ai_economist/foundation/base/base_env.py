@@ -223,6 +223,12 @@ class BaseEnvironment(ABC):
         assert n_agents >= 2
         self.n_agents = n_agents
 
+        # Foundation assumes there's only a single planner
+        n_planners = 1
+        self.num_agents = (
+            n_agents + n_planners
+        )  # used in the warp_drive env wrapper (+ 1 for the planner)
+
         # Components must be a tuple/list where each element is either a...
         #   tuple: ('Component Name', {Component kwargs})
         #   dict : {'Component Name': {Component kwargs}}
