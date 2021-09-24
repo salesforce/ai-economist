@@ -346,6 +346,16 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # Normalization factor for the reward (often useful for RL training)
         self.reward_normalization_factor = reward_normalization_factor
 
+        # CUDA-related attributes (for GPU simulations)
+        # These will be set via the env_wrapper
+        # use_cuda will be set to True (by the env_wrapper), if needed
+        # to be simulated on the GPU
+        self.use_cuda = None
+        self.cuda_data_manager = None
+        self.cuda_function_manager = None
+        self.cuda_step = lambda *args, **kwargs: None
+        self.cuda_compute_reward = lambda *args, **kwargs: None
+
     name = "CovidAndEconomySimulation"
     agent_subclasses = ["BasicMobileAgent", "BasicPlanner"]
 

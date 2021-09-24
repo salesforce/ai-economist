@@ -6,6 +6,9 @@
 
 """
 Example training script for the grid world and continuous versions of Tag.
+Note: This training script only runs on a GPU machine.
+You will also need to install WarpDrive (https://github.com/salesforce/warp-drive)
+using `pip install rl-warp-drive`, and Pytorch(https://pytorch.org/)
 """
 
 import argparse
@@ -105,7 +108,7 @@ if __name__ == "__main__":
     # Set "create_separate_placeholders_for_each_policy" to True
     # since the agents and planner have different observation
     # and action spaces.
-    create_separate_placeholders_for_each_policy = True
+    separate_placeholder_per_policy = True
 
     # Flag indicating the observation dimension corresponding to
     # 'num_agents'
@@ -122,7 +125,7 @@ if __name__ == "__main__":
         env_wrapper=env_wrapper,
         config=run_config,
         policy_tag_to_agent_id_map=policy_tag_to_agent_id_map,
-        create_separate_placeholders_for_each_policy=create_separate_placeholders_for_each_policy,
+        create_separate_placeholders_for_each_policy=separate_placeholder_per_policy,
         obs_dim_corresponding_to_num_agents=obs_dim_corresponding_to_num_agents,
     )
 

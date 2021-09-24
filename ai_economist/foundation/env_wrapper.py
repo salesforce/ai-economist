@@ -92,7 +92,7 @@ class FoundationEnvWrapper(EnvWrapper):
             # Component step
             # Create a cuda_component_step dictionary
             self.env.world.cuda_component_step = {}
-            for component in self.env._components:
+            for component in self.env.components:
                 self.cuda_function_manager.initialize_functions(
                     ["Cuda" + component.name + "Step"]
                 )
@@ -134,7 +134,7 @@ class FoundationEnvWrapper(EnvWrapper):
                 # Copy host data and tensors to device
                 # Note: this happens only once after the first reset on the host
 
-                scenario_and_components = [self.env] + self.env._components
+                scenario_and_components = [self.env] + self.env.components
 
                 for item in scenario_and_components:
                     # Add env dimension to data
@@ -185,14 +185,14 @@ class FoundationEnvWrapper(EnvWrapper):
         """
         if self.use_cuda:
             # Step through each component
-            for component in self.env._components:
+            for component in self.env.components:
                 component.component_step()
 
             # Scenario step
             self.env.scenario_step()
 
             # Compute rewards
-            self.env._generate_rewards()
+            self.env.generate_rewards()
 
             obs = {}
             rew = {}
