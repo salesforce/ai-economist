@@ -51,22 +51,41 @@ jobs:
         # Add as many codes under --disable= for the checks to disable
         # Note: exit-zero disregards all errors
         # *** CODES CURRENTLY DISABLED ***
-        # C0330: bad-continuation
-        # R0801: duplicate-code
         # C0103: invalid-name
         # C0114: missing-module-docstring
         # C0116: missing-function-docstring
+        # C0302: too-many-lines
+        # C0330: bad-continuation
+        # E0401: import-error
+        # R0201: no-self-use
+        # R0801: duplicate-code
+        # R0902: too-many-instance-attributes
+        # R0903: too-few-public-methods
+        # R0904: too-many-public-methods
         # R0912: too-many-branches
         # R0913: too-many-arguments
         # R0914: too-many-locals
         # R0915: too-many-statements
-        # R0902: too-many-instance-attributes
-        # R0903: too-few-public-methods
-        # R0904: too-many-public-methods
-        # R0201: no-self-use
-        # C0302: too-many-lines
+        # R1702: too-many-nested-blocks
 
-        pylint --disable bad-continuation,duplicate-code,invalid-name,missing-module-docstring,missing-function-docstring,too-many-branches,too-many-arguments,too-many-locals,too-many-statements,too-many-instance-attributes,too-few-public-methods,too-many-public-methods,no-self-use,too-many-lines ai_economist/
+        pylint --disable \
+        bad-continuation,\
+        duplicate-code,\
+        import-error,\
+        invalid-name,\
+        missing-module-docstring,\
+        missing-function-docstring,\
+        no-self-use,\
+        too-few-public-methods,\
+        too-many-arguments,\
+        too-many-branches,\
+        too-many-instance-attributes,\
+        too-many-lines,\
+        too-many-locals,\
+        too-many-nested-blocks,\
+        too-many-public-methods,\
+        too-many-statements, \
+        ai-economist
 
     - name: Test with pytest
       run: |
