@@ -84,8 +84,8 @@ jobs:
         too-many-locals,\
         too-many-nested-blocks,\
         too-many-public-methods,\
-        too-many-statements, \
-        ai-economist
+        too-many-statements \
+        ai-economist/
 
     - name: Test with pytest
       run: |
