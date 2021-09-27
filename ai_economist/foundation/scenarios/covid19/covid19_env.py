@@ -8,10 +8,19 @@ import json
 import os
 from datetime import datetime, timedelta
 
+import GPUtil
 import numpy as np
 
 from ai_economist.foundation.base.base_env import BaseEnvironment, scenario_registry
 from ai_economist.foundation.utils import verify_activation_code
+
+if len(GPUtil.getAvailable()) > 0:
+    from warp_drive.utils.constants import Constants
+    from warp_drive.utils.data_feed import DataFeed
+
+    _OBSERVATIONS = Constants.OBSERVATIONS
+    _ACTIONS = Constants.ACTIONS
+    _REWARDS = Constants.REWARDS
 
 
 @scenario_registry.add
@@ -337,6 +346,16 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # Normalization factor for the reward (often useful for RL training)
         self.reward_normalization_factor = reward_normalization_factor
 
+        # CUDA-related attributes (for GPU simulations)
+        # These will be set via the env_wrapper
+        # use_cuda will be set to True (by the env_wrapper), if needed
+        # to be simulated on the GPU
+        self.use_cuda = None
+        self.cuda_data_manager = None
+        self.cuda_function_manager = None
+        self.cuda_step = lambda *args, **kwargs: None
+        self.cuda_compute_reward = lambda *args, **kwargs: None
+
     name = "CovidAndEconomySimulation"
     agent_subclasses = ["BasicMobileAgent", "BasicPlanner"]
 
@@ -348,6 +367,268 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
     def reset_agent_states(self):
         self.world.clear_agent_locs()
 
+    def get_data_dictionary(self):
+        """
+        Create a dictionary of data to push to the GPU (device).
+        """
+        data_dict = DataFeed()
+        # Global States
+        data_dict.add_data(
+            name="susceptible",
+            data=self.world.global_state["Susceptible"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="infected",
+            data=self.world.global_state["Infected"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="recovered",
+            data=self.world.global_state["Recovered"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="deaths",
+            data=self.world.global_state["Deaths"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="unemployed",
+            data=self.world.global_state["Unemployed"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="vaccinated",
+            data=self.world.global_state["Vaccinated"],
+            save_copy_and_apply_at_reset=True,
+        )
+        # Actions
+        data_dict.add_data(
+            name="stringency_level",
+            data=self.world.global_state["Stringency Level"].astype(self.np_int_dtype),
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="subsidy_level",
+            data=self.world.global_state["Subsidy Level"].astype(self.np_int_dtype),
+            save_copy_and_apply_at_reset=True,
+        )
+        # Economy-related
+        data_dict.add_data(
+            name="subsidy",
+            data=self.world.global_state["Subsidy"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="postsubsidy_productivity",
+            data=self.world.global_state["Postsubsidy Productivity"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="productivity",
+            data=np.zeros_like(
+                self.world.global_state["Susceptible"], dtype=self.np_float_dtype
+            ),
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="incapacitated",
+            data=np.zeros((self.num_us_states), dtype=self.np_float_dtype),
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="cant_work",
+            data=np.zeros((self.num_us_states), dtype=self.np_float_dtype),
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="num_people_that_can_work",
+            data=np.zeros((self.num_us_states), dtype=self.np_float_dtype),
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="us_state_population",
+            data=self.us_state_population,
+        )
+        data_dict.add_data(
+            name="infection_too_sick_to_work_rate",
+            data=self.infection_too_sick_to_work_rate,
+        )
+        data_dict.add_data(
+            name="population_between_age_18_65",
+            data=self.pop_between_age_18_65,
+        )
+        data_dict.add_data(
+            name="daily_production_per_worker",
+            data=self.daily_production_per_worker,
+        )
+        data_dict.add_data(
+            name="maximum_productivity",
+            data=self.maximum_productivity_t,
+        )
+        # SIR-related
+        data_dict.add_data(
+            name="real_world_stringency_policy_history",
+            data=(
+                self._real_world_data["policy"][
+                    self.start_date_index - self.beta_delay + 1 : self.start_date_index,
+                    :,
+                ]
+            ).astype(self.np_int_dtype),
+        )
+        data_dict.add_data(
+            name="beta_delay",
+            data=self.beta_delay,
+        )
+        data_dict.add_data(
+            name="beta_slopes",
+            data=self.beta_slopes,
+        )
+        data_dict.add_data(
+            name="beta_intercepts",
+            data=self.beta_intercepts,
+        )
+        data_dict.add_data(
+            name="beta",
+            data=np.zeros((self.num_us_states), dtype=self.np_float_dtype),
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="gamma",
+            data=self.gamma,
+        )
+        data_dict.add_data(
+            name="death_rate",
+            data=self.death_rate,
+        )
+        # Unemployment fit parameters
+        data_dict.add_data(
+            name="filter_len",
+            data=self.filter_len,
+        )
+        data_dict.add_data(
+            name="num_filters",
+            data=self.num_filters,
+        )
+        data_dict.add_data(
+            name="delta_stringency_level",
+            data=(
+                self.stringency_level_history[1:] - self.stringency_level_history[:-1]
+            ).astype(self.np_int_dtype),
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="grouped_convolutional_filter_weights",
+            data=self.grouped_convolutional_filter_weights,
+        )
+        data_dict.add_data(
+            name="unemp_conv_filters",
+            data=self.unemp_conv_filters,
+        )
+        data_dict.add_data(
+            name="unemployment_bias",
+            data=self.unemployment_bias,
+        )
+        data_dict.add_data(
+            name="signal",
+            data=np.zeros(
+                (self.n_agents, self.num_filters, self.filter_len),
+                dtype=self.np_float_dtype,
+            ),
+            save_copy_and_apply_at_reset=True,
+        )
+        # Reward-related
+        data_dict.add_data(
+            name="min_marginal_agent_health_index",
+            data=self.min_marginal_agent_health_index,
+        )
+        data_dict.add_data(
+            name="max_marginal_agent_health_index",
+            data=self.max_marginal_agent_health_index,
+        )
+        data_dict.add_data(
+            name="min_marginal_agent_economic_index",
+            data=self.min_marginal_agent_economic_index,
+        )
+        data_dict.add_data(
+            name="max_marginal_agent_economic_index",
+            data=self.max_marginal_agent_economic_index,
+        )
+        data_dict.add_data(
+            name="min_marginal_planner_health_index",
+            data=self.min_marginal_planner_health_index,
+        )
+        data_dict.add_data(
+            name="max_marginal_planner_health_index",
+            data=self.max_marginal_planner_health_index,
+        )
+        data_dict.add_data(
+            name="min_marginal_planner_economic_index",
+            data=self.min_marginal_planner_economic_index,
+        )
+        data_dict.add_data(
+            name="max_marginal_planner_economic_index",
+            data=self.max_marginal_planner_economic_index,
+        )
+        data_dict.add_data(
+            name="weightage_on_marginal_agent_health_index",
+            data=self.weightage_on_marginal_agent_health_index,
+        )
+        data_dict.add_data(
+            name="weightage_on_marginal_agent_economic_index",
+            data=self.weightage_on_marginal_agent_economic_index,
+        )
+        data_dict.add_data(
+            name="weightage_on_marginal_planner_health_index",
+            data=self.weightage_on_marginal_planner_health_index,
+        )
+        data_dict.add_data(
+            name="weightage_on_marginal_planner_economic_index",
+            data=self.weightage_on_marginal_planner_economic_index,
+        )
+        data_dict.add_data(
+            name="value_of_life",
+            data=self.value_of_life,
+        )
+        data_dict.add_data(
+            name="economic_reward_crra_eta",
+            data=self.economic_reward_crra_eta,
+        )
+        data_dict.add_data(
+            name="num_days_in_an_year",
+            data=self.num_days_in_an_year,
+        )
+        data_dict.add_data(
+            name="risk_free_interest_rate",
+            data=self.risk_free_interest_rate,
+        )
+        data_dict.add_data(
+            name="agents_health_norm",
+            data=self.agents_health_norm,
+        )
+        data_dict.add_data(
+            name="agents_economic_norm",
+            data=self.agents_economic_norm,
+        )
+        data_dict.add_data(
+            name="planner_health_norm",
+            data=self.planner_health_norm,
+        )
+        data_dict.add_data(
+            name="planner_economic_norm",
+            data=self.planner_economic_norm,
+        )
+
+        return data_dict
+
+    def get_tensor_dictionary(self):
+        """
+        Create a dictionary of (Pytorch-accesible) data to push to the GPU (device).
+        """
+        tensor_dict = DataFeed()
+        return tensor_dict
+
     def scenario_step(self):
         """
         Update the state of the USA based on the Covid-19 and Economy dynamics.
@@ -358,183 +639,264 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
          based on the stringency levels
         - economy_step - computes the current producitivity numbers for the agents
         """
-        prev_t = self.world.timestep - 1
-        curr_t = self.world.timestep
-
-        self.current_date += timedelta(days=1)
-
-        # SIR
-        # ---
-        if self.use_real_world_data:
-            _S_t = np.maximum(
-                self._real_world_data["susceptible"][curr_t + self.start_date_index],
-                0,
+        if self.use_cuda:
+            self.cuda_step(
+                self.cuda_data_manager.device_data("susceptible"),
+                self.cuda_data_manager.device_data("infected"),
+                self.cuda_data_manager.device_data("recovered"),
+                self.cuda_data_manager.device_data("deaths"),
+                self.cuda_data_manager.device_data("vaccinated"),
+                self.cuda_data_manager.device_data("unemployed"),
+                self.cuda_data_manager.device_data("subsidy"),
+                self.cuda_data_manager.device_data("productivity"),
+                self.cuda_data_manager.device_data("stringency_level"),
+                self.cuda_data_manager.device_data("num_stringency_levels"),
+                self.cuda_data_manager.device_data("postsubsidy_productivity"),
+                self.cuda_data_manager.device_data("num_vaccines_available_t"),
+                self.cuda_data_manager.device_data(
+                    "real_world_stringency_policy_history"
+                ),
+                self.cuda_data_manager.device_data("beta_delay"),
+                self.cuda_data_manager.device_data("beta_slopes"),
+                self.cuda_data_manager.device_data("beta_intercepts"),
+                self.cuda_data_manager.device_data("beta"),
+                self.cuda_data_manager.device_data("gamma"),
+                self.cuda_data_manager.device_data("death_rate"),
+                self.cuda_data_manager.device_data("incapacitated"),
+                self.cuda_data_manager.device_data("cant_work"),
+                self.cuda_data_manager.device_data("num_people_that_can_work"),
+                self.cuda_data_manager.device_data("us_state_population"),
+                self.cuda_data_manager.device_data("infection_too_sick_to_work_rate"),
+                self.cuda_data_manager.device_data("population_between_age_18_65"),
+                self.cuda_data_manager.device_data("filter_len"),
+                self.cuda_data_manager.device_data("num_filters"),
+                self.cuda_data_manager.device_data("delta_stringency_level"),
+                self.cuda_data_manager.device_data(
+                    "grouped_convolutional_filter_weights"
+                ),
+                self.cuda_data_manager.device_data("unemp_conv_filters"),
+                self.cuda_data_manager.device_data("unemployment_bias"),
+                self.cuda_data_manager.device_data("signal"),
+                self.cuda_data_manager.device_data("daily_production_per_worker"),
+                self.cuda_data_manager.device_data("maximum_productivity"),
+                self.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_a_world-agent_state"
+                ),
+                self.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_a_world-agent_postsubsidy_productivity"
+                ),
+                self.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_a_world-lagged_stringency_level"
+                ),
+                self.cuda_data_manager.device_data(f"{_OBSERVATIONS}_a_time"),
+                self.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_p_world-agent_state"
+                ),
+                self.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_p_world-agent_postsubsidy_productivity"
+                ),
+                self.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_p_world-lagged_stringency_level"
+                ),
+                self.cuda_data_manager.device_data(f"{_OBSERVATIONS}_p_time"),
+                self.cuda_data_manager.device_data("_timestep_"),
+                self.cuda_data_manager.meta_info("n_agents"),
+                self.cuda_data_manager.meta_info("episode_length"),
+                block=self.world.cuda_function_manager.block,
+                grid=self.world.cuda_function_manager.grid,
             )
-            _I_t = np.maximum(
-                self._real_world_data["infected"][curr_t + self.start_date_index],
-                0,
-            )
-            _R_t = np.maximum(
-                self._real_world_data["recovered"][curr_t + self.start_date_index],
-                0,
-            )
-            _V_t = np.maximum(
-                self._real_world_data["vaccinated"][curr_t + self.start_date_index],
-                0,
-            )
-            _D_t = np.maximum(
-                self._real_world_data["deaths"][curr_t + self.start_date_index],
-                0,
-            )
-
-        else:  # Use simulation logic
-            if curr_t - self.beta_delay < 0:
-                if self.start_date_index + curr_t - self.beta_delay < 0:
-                    stringency_level_tmk = np.ones(self.num_us_states)
-                else:
-                    stringency_level_tmk = self._real_world_data["policy"][
-                        self.start_date_index + curr_t - self.beta_delay, :
-                    ]
-            else:
-                stringency_level_tmk = self.world.global_state["Stringency Level"][
-                    curr_t - self.beta_delay
-                ]
-            stringency_level_tmk = stringency_level_tmk.astype(self.np_int_dtype)
-
-            _S_tm1 = self.world.global_state["Susceptible"][prev_t]
-            _I_tm1 = self.world.global_state["Infected"][prev_t]
-            _R_tm1 = self.world.global_state["Recovered"][prev_t]
-            _V_tm1 = self.world.global_state["Vaccinated"][prev_t]
-
-            # Vaccination
-            # -----------
-            num_vaccines_available_t = np.zeros(self.n_agents, dtype=self.np_int_dtype)
-            for aidx, agent in enumerate(self.world.agents):
-                # "Load" the vaccines in the inventory into this vector.
-                num_vaccines_available_t[aidx] = agent.state["Vaccines Available"]
-                # Agents always use whatever vaccines they can, so this becomes 0:
-                agent.state["Total Vaccinated"] += agent.state["Vaccines Available"]
-                agent.state["Vaccines Available"] = 0
-
-            # SIR step
-            # --------
-            _dS, _dI, _dR, _dV = self.sir_step(
-                _S_tm1,
-                _I_tm1,
-                stringency_level_tmk,
-                num_vaccines_available_t,
-            )
-            _S_t = np.maximum(_S_tm1 + _dS, 0)
-            _I_t = np.maximum(_I_tm1 + _dI, 0)
-            _R_t = np.maximum(_R_tm1 + _dR, 0)
-            _V_t = np.maximum(_V_tm1 + _dV, 0)
-
-            num_recovered_but_not_vaccinated_t = _R_t - _V_t
-            _D_t = self.death_rate * num_recovered_but_not_vaccinated_t
-
-        # Update global state
-        # -------------------
-        self.world.global_state["Susceptible"][curr_t] = _S_t
-        self.world.global_state["Infected"][curr_t] = _I_t
-        self.world.global_state["Recovered"][curr_t] = _R_t
-        self.world.global_state["Deaths"][curr_t] = _D_t
-        self.world.global_state["Vaccinated"][curr_t] = _V_t
-
-        # Unemployment
-        # ------------
-        if self.use_real_world_data:
-            num_unemployed_t = self._real_world_data["unemployed"][
-                self.start_date_index + curr_t
-            ]
         else:
-            num_unemployed_t = self.unemployment_step(
-                current_stringency_level=self.world.global_state["Stringency Level"][
-                    curr_t
+            prev_t = self.world.timestep - 1
+            curr_t = self.world.timestep
+
+            self.current_date += timedelta(days=1)
+
+            # SIR
+            # ---
+            if self.use_real_world_data:
+                _S_t = np.maximum(
+                    self._real_world_data["susceptible"][
+                        curr_t + self.start_date_index
+                    ],
+                    0,
+                )
+                _I_t = np.maximum(
+                    self._real_world_data["infected"][curr_t + self.start_date_index],
+                    0,
+                )
+                _R_t = np.maximum(
+                    self._real_world_data["recovered"][curr_t + self.start_date_index],
+                    0,
+                )
+                _V_t = np.maximum(
+                    self._real_world_data["vaccinated"][curr_t + self.start_date_index],
+                    0,
+                )
+                _D_t = np.maximum(
+                    self._real_world_data["deaths"][curr_t + self.start_date_index],
+                    0,
+                )
+
+            else:  # Use simulation logic
+                if curr_t - self.beta_delay < 0:
+                    if self.start_date_index + curr_t - self.beta_delay < 0:
+                        stringency_level_tmk = np.ones(self.num_us_states)
+                    else:
+                        stringency_level_tmk = self._real_world_data["policy"][
+                            self.start_date_index + curr_t - self.beta_delay, :
+                        ]
+                else:
+                    stringency_level_tmk = self.world.global_state["Stringency Level"][
+                        curr_t - self.beta_delay
+                    ]
+                stringency_level_tmk = stringency_level_tmk.astype(self.np_int_dtype)
+
+                _S_tm1 = self.world.global_state["Susceptible"][prev_t]
+                _I_tm1 = self.world.global_state["Infected"][prev_t]
+                _R_tm1 = self.world.global_state["Recovered"][prev_t]
+                _V_tm1 = self.world.global_state["Vaccinated"][prev_t]
+
+                # Vaccination
+                # -----------
+                num_vaccines_available_t = np.zeros(
+                    self.n_agents, dtype=self.np_int_dtype
+                )
+                for aidx, agent in enumerate(self.world.agents):
+                    # "Load" the vaccines in the inventory into this vector.
+                    num_vaccines_available_t[aidx] = agent.state["Vaccines Available"]
+                    # Agents always use whatever vaccines they can, so this becomes 0:
+                    agent.state["Total Vaccinated"] += agent.state["Vaccines Available"]
+                    agent.state["Vaccines Available"] = 0
+
+                # SIR step
+                # --------
+                _dS, _dI, _dR, _dV = self.sir_step(
+                    _S_tm1,
+                    _I_tm1,
+                    stringency_level_tmk,
+                    num_vaccines_available_t,
+                )
+                _S_t = np.maximum(_S_tm1 + _dS, 0)
+                _I_t = np.maximum(_I_tm1 + _dI, 0)
+                _R_t = np.maximum(_R_tm1 + _dR, 0)
+                _V_t = np.maximum(_V_tm1 + _dV, 0)
+
+                num_recovered_but_not_vaccinated_t = _R_t - _V_t
+                _D_t = self.death_rate * num_recovered_but_not_vaccinated_t
+
+            # Update global state
+            # -------------------
+            self.world.global_state["Susceptible"][curr_t] = _S_t
+            self.world.global_state["Infected"][curr_t] = _I_t
+            self.world.global_state["Recovered"][curr_t] = _R_t
+            self.world.global_state["Deaths"][curr_t] = _D_t
+            self.world.global_state["Vaccinated"][curr_t] = _V_t
+
+            # Unemployment
+            # ------------
+            if self.use_real_world_data:
+                num_unemployed_t = self._real_world_data["unemployed"][
+                    self.start_date_index + curr_t
                 ]
+            else:
+                num_unemployed_t = self.unemployment_step(
+                    current_stringency_level=self.world.global_state[
+                        "Stringency Level"
+                    ][curr_t]
+                )
+
+            self.world.global_state["Unemployed"][curr_t] = num_unemployed_t
+
+            # Productivity
+            # ------------
+            productivity_t = self.economy_step(
+                self.us_state_population,
+                infected=_I_t,
+                deaths=_D_t,
+                unemployed=num_unemployed_t,
+                infection_too_sick_to_work_rate=self.infection_too_sick_to_work_rate,
+                population_between_age_18_65=self.pop_between_age_18_65,
             )
 
-        self.world.global_state["Unemployed"][curr_t] = num_unemployed_t
+            # Subsidies
+            # ---------
+            # Add federal government subsidy to productivity
+            daily_statewise_subsidy_t = self.world.global_state["Subsidy"][curr_t]
+            postsubsidy_productivity_t = productivity_t + daily_statewise_subsidy_t
+            self.world.global_state["Postsubsidy Productivity"][
+                curr_t
+            ] = postsubsidy_productivity_t
 
-        # Productivity
-        # ------------
-        productivity_t = self.economy_step(
-            self.us_state_population,
-            infected=_I_t,
-            deaths=_D_t,
-            unemployed=num_unemployed_t,
-            infection_too_sick_to_work_rate=self.infection_too_sick_to_work_rate,
-            population_between_age_18_65=self.pop_between_age_18_65,
-        )
+            # Update agent state
+            # ------------------
+            current_date_string = datetime.strftime(
+                self.current_date, format=self.date_format
+            )
+            for agent in self.world.agents:
+                agent.state["Total Susceptible"] = _S_t[agent.idx].astype(
+                    self.np_int_dtype
+                )
+                agent.state["New Infections"] = (
+                    _I_t[agent.idx] - agent.state["Total Infected"]
+                ).astype(self.np_int_dtype)
+                agent.state["Total Infected"] = _I_t[agent.idx].astype(
+                    self.np_int_dtype
+                )
+                agent.state["Total Recovered"] = _R_t[agent.idx].astype(
+                    self.np_int_dtype
+                )
+                agent.state["New Deaths"] = _D_t[agent.idx] - agent.state[
+                    "Total Deaths"
+                ].astype(self.np_int_dtype)
+                agent.state["Total Deaths"] = _D_t[agent.idx].astype(self.np_int_dtype)
+                agent.state["Total Vaccinated"] = _V_t[agent.idx].astype(
+                    self.np_int_dtype
+                )
 
-        # Subsidies
-        # ---------
-        # Add federal government subsidy to productivity
-        daily_statewise_subsidy_t = self.world.global_state["Subsidy"][curr_t]
-        postsubsidy_productivity_t = productivity_t + daily_statewise_subsidy_t
-        self.world.global_state["Postsubsidy Productivity"][
-            curr_t
-        ] = postsubsidy_productivity_t
+                agent.state["Total Unemployed"] = num_unemployed_t[agent.idx].astype(
+                    self.np_int_dtype
+                )
+                agent.state["New Subsidy Received"] = daily_statewise_subsidy_t[
+                    agent.idx
+                ]
+                agent.state["Postsubsidy Productivity"] = postsubsidy_productivity_t[
+                    agent.idx
+                ]
+                agent.state["Date"] = current_date_string
 
-        # Update agent state
-        # ------------------
-        current_date_string = datetime.strftime(
-            self.current_date, format=self.date_format
-        )
-        for agent in self.world.agents:
-            agent.state["Total Susceptible"] = _S_t[agent.idx].astype(self.np_int_dtype)
-            agent.state["New Infections"] = (
-                _I_t[agent.idx] - agent.state["Total Infected"]
-            ).astype(self.np_int_dtype)
-            agent.state["Total Infected"] = _I_t[agent.idx].astype(self.np_int_dtype)
-            agent.state["Total Recovered"] = _R_t[agent.idx].astype(self.np_int_dtype)
-            agent.state["New Deaths"] = _D_t[agent.idx] - agent.state[
-                "Total Deaths"
-            ].astype(self.np_int_dtype)
-            agent.state["Total Deaths"] = _D_t[agent.idx].astype(self.np_int_dtype)
-            agent.state["Total Vaccinated"] = _V_t[agent.idx].astype(self.np_int_dtype)
-
-            agent.state["Total Unemployed"] = num_unemployed_t[agent.idx].astype(
+            # Update planner state
+            # --------------------
+            self.world.planner.state["Total Susceptible"] = np.sum(_S_t).astype(
                 self.np_int_dtype
             )
-            agent.state["New Subsidy Received"] = daily_statewise_subsidy_t[agent.idx]
-            agent.state["Postsubsidy Productivity"] = postsubsidy_productivity_t[
-                agent.idx
-            ]
-            agent.state["Date"] = current_date_string
-
-        # Update planner state
-        # --------------------
-        self.world.planner.state["Total Susceptible"] = np.sum(_S_t).astype(
-            self.np_int_dtype
-        )
-        self.world.planner.state["New Infections"] = (
-            np.sum(_I_t) - self.world.planner.state["Total Infected"]
-        ).astype(self.np_int_dtype)
-        self.world.planner.state["Total Infected"] = np.sum(_I_t).astype(
-            self.np_int_dtype
-        )
-        self.world.planner.state["Total Recovered"] = np.sum(_R_t).astype(
-            self.np_int_dtype
-        )
-        self.world.planner.state["New Deaths"] = (
-            np.sum(_D_t) - self.world.planner.state["Total Deaths"]
-        ).astype(self.np_int_dtype)
-        self.world.planner.state["Total Deaths"] = np.sum(_D_t).astype(
-            self.np_int_dtype
-        )
-        self.world.planner.state["Total Vaccinated"] = np.sum(_V_t).astype(
-            self.np_int_dtype
-        )
-        self.world.planner.state["Total Unemployed"] = np.sum(num_unemployed_t).astype(
-            self.np_int_dtype
-        )
-        self.world.planner.state["New Subsidy Provided"] = np.sum(
-            daily_statewise_subsidy_t
-        )
-        self.world.planner.state["Postsubsidy Productivity"] = np.sum(
-            postsubsidy_productivity_t
-        )
-        self.world.planner.state["Date"] = current_date_string
+            self.world.planner.state["New Infections"] = (
+                np.sum(_I_t) - self.world.planner.state["Total Infected"]
+            ).astype(self.np_int_dtype)
+            self.world.planner.state["Total Infected"] = np.sum(_I_t).astype(
+                self.np_int_dtype
+            )
+            self.world.planner.state["Total Recovered"] = np.sum(_R_t).astype(
+                self.np_int_dtype
+            )
+            self.world.planner.state["New Deaths"] = (
+                np.sum(_D_t) - self.world.planner.state["Total Deaths"]
+            ).astype(self.np_int_dtype)
+            self.world.planner.state["Total Deaths"] = np.sum(_D_t).astype(
+                self.np_int_dtype
+            )
+            self.world.planner.state["Total Vaccinated"] = np.sum(_V_t).astype(
+                self.np_int_dtype
+            )
+            self.world.planner.state["Total Unemployed"] = np.sum(
+                num_unemployed_t
+            ).astype(self.np_int_dtype)
+            self.world.planner.state["New Subsidy Provided"] = np.sum(
+                daily_statewise_subsidy_t
+            )
+            self.world.planner.state["Postsubsidy Productivity"] = np.sum(
+                postsubsidy_productivity_t
+            )
+            self.world.planner.state["Date"] = current_date_string
 
     def generate_observations(self):
         """
@@ -617,6 +979,53 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         Compute the social welfare metrics for each agent and the planner.
         :return: a dictionary of rewards for each agent in the simulation
         """
+        if self.use_cuda:
+            self.cuda_compute_reward(
+                self.cuda_data_manager.device_data(f"{_REWARDS}_a"),
+                self.cuda_data_manager.device_data(f"{_REWARDS}_p"),
+                self.cuda_data_manager.device_data("num_days_in_an_year"),
+                self.cuda_data_manager.device_data("value_of_life"),
+                self.cuda_data_manager.device_data("risk_free_interest_rate"),
+                self.cuda_data_manager.device_data("economic_reward_crra_eta"),
+                self.cuda_data_manager.device_data("min_marginal_agent_health_index"),
+                self.cuda_data_manager.device_data("max_marginal_agent_health_index"),
+                self.cuda_data_manager.device_data("min_marginal_agent_economic_index"),
+                self.cuda_data_manager.device_data("max_marginal_agent_economic_index"),
+                self.cuda_data_manager.device_data("min_marginal_planner_health_index"),
+                self.cuda_data_manager.device_data("max_marginal_planner_health_index"),
+                self.cuda_data_manager.device_data(
+                    "min_marginal_planner_economic_index"
+                ),
+                self.cuda_data_manager.device_data(
+                    "max_marginal_planner_economic_index"
+                ),
+                self.cuda_data_manager.device_data(
+                    "weightage_on_marginal_agent_health_index"
+                ),
+                self.cuda_data_manager.device_data(
+                    "weightage_on_marginal_agent_economic_index"
+                ),
+                self.cuda_data_manager.device_data(
+                    "weightage_on_marginal_planner_health_index"
+                ),
+                self.cuda_data_manager.device_data(
+                    "weightage_on_marginal_planner_economic_index"
+                ),
+                self.cuda_data_manager.device_data("agents_health_norm"),
+                self.cuda_data_manager.device_data("agents_economic_norm"),
+                self.cuda_data_manager.device_data("planner_health_norm"),
+                self.cuda_data_manager.device_data("planner_economic_norm"),
+                self.cuda_data_manager.device_data("deaths"),
+                self.cuda_data_manager.device_data("subsidy"),
+                self.cuda_data_manager.device_data("postsubsidy_productivity"),
+                self.cuda_data_manager.device_data("_done_"),
+                self.cuda_data_manager.device_data("_timestep_"),
+                self.cuda_data_manager.meta_info("n_agents"),
+                self.cuda_data_manager.meta_info("episode_length"),
+                block=self.world.cuda_function_manager.block,
+                grid=self.world.cuda_function_manager.grid,
+            )
+            return {}  # Return empty dict. Reward arrays are updated in-place
         rew = {"a": 0, "p": 0}
 
         def crra_nonlinearity(x, eta):
@@ -798,6 +1207,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         )
 
         # All US states start with zero subsidy and zero Postsubsidy Productivity
+        self.set_global_state("Subsidy Level", dtype=self.np_float_dtype)
         self.set_global_state("Subsidy", dtype=self.np_float_dtype)
         self.set_global_state("Postsubsidy Productivity", dtype=self.np_float_dtype)
 
@@ -876,6 +1286,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             "Unemployed",
             "Vaccinated",
             "Stringency Level",
+            "Subsidy Level",
             "Subsidy",
             "Postsubsidy Productivity",
         ]

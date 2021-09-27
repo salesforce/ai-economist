@@ -223,6 +223,12 @@ class BaseEnvironment(ABC):
         assert n_agents >= 2
         self.n_agents = n_agents
 
+        # Foundation assumes there's only a single planner
+        n_planners = 1
+        self.num_agents = (
+            n_agents + n_planners
+        )  # used in the warp_drive env wrapper (+ 1 for the planner)
+
         # Components must be a tuple/list where each element is either a...
         #   tuple: ('Component Name', {Component kwargs})
         #   dict : {'Component Name': {Component kwargs}}
@@ -431,6 +437,11 @@ class BaseEnvironment(ABC):
         return metrics
 
     @property
+    def components(self):
+        """The list of components associated with this scenario."""
+        return self._components
+
+    @property
     def dense_log(self):
         """The contents of the current (potentially incomplete) dense log."""
         return self._dense_log
@@ -463,6 +474,11 @@ class BaseEnvironment(ABC):
             metrics = env.previous_episode_metrics
         """
         return self._last_ep_replay_log
+
+    @property
+    def generate_rewards(self):
+        """Compute the rewards for each agent."""
+        return self._generate_rewards
 
     # Seed control
     # -----------------
