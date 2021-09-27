@@ -179,9 +179,9 @@ class FoundationEnvWrapper(EnvWrapper):
             return {}
         return obs  # CPU version
 
-    def step(self, actions=None):
+    def step_all_envs(self, actions=None):
         """
-        Step through the environment components and scenario
+        Step through all the environments' components and scenario
         """
         if self.use_cuda:
             # Step through each component

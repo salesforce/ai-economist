@@ -19,7 +19,9 @@ setuptools.setup(
     package_data={
         "ai_economist": [
             "foundation/scenarios/simple_wood_and_stone/map_txt/*.txt",
+            "foundation/scenarios/covid19/*.cu",
             "foundation/scenarios/covid19/key_to_check_activation_code_against",
+            "foundation/components/*.cu",
             "datasets/covid19_datasets/data_and_fitted_params/*"
         ],
     },
