@@ -10,8 +10,7 @@ import numpy as np
 from scipy import signal
 
 from ai_economist.foundation.base.base_env import BaseEnvironment, scenario_registry
-
-from ..utils import rewards, social_metrics
+from ai_economist.foundation.scenarios.utils import rewards, social_metrics
 
 
 @scenario_registry.add

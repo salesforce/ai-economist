@@ -12,11 +12,19 @@ import GPUtil
 import numpy as np
 from gym.spaces import Discrete, MultiDiscrete
 
-if len(GPUtil.getAvailable()) > 0:
-    from warp_drive.env_wrapper import EnvWrapper
-    from warp_drive.utils.recursive_obs_dict_to_spaces_dict import (
-        recursive_obs_dict_to_spaces_dict,
-    )
+try:
+    num_gpus_available = len(GPUtil.getAvailable())
+    assert num_gpus_available > 0, "This script needs a GPU machine to run!!"
+    if num_gpus_available == 0:
+        print("No GPUs found! Running the simulation on a CPU.")
+    else:
+        print(f"{num_gpus_available} GPUs are available.")
+        from warp_drive.env_wrapper import EnvWrapper
+        from warp_drive.utils.recursive_obs_dict_to_spaces_dict import (
+            recursive_obs_dict_to_spaces_dict,
+        )
+except ValueError:
+    print("No GPUs found! Running the simulation on a CPU.")
 
 
 class FoundationEnvWrapper(EnvWrapper):

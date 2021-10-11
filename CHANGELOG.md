@@ -29,3 +29,6 @@
 - CUDA C scenario and component codes
 - Environment Wrapper
 - Environment CPU / GPU consistency checker
+
+# Release 1.4 (2021-10-15)
+- One-step economy scenario and the simple labor component

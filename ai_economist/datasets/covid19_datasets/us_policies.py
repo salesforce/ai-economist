@@ -67,9 +67,7 @@ class DatasetCovidPoliciesUS:
             self.df = pd.read_csv(os.path.join(data_dir, filename), low_memory=False)
 
     def process_policy_data(
-        self,
-        stringency_policy_key="StringencyIndex",
-        num_stringency_levels=10,
+        self, stringency_policy_key="StringencyIndex", num_stringency_levels=10
     ):
         """
         Gather the relevant policy indicator frm the dataframe,
