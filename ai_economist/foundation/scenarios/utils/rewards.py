@@ -6,7 +6,7 @@
 
 import numpy as np
 
-from . import social_metrics
+from ai_economist.foundation.scenarios.utils import social_metrics
 
 
 def isoelastic_coin_minus_labor(
@@ -41,6 +41,39 @@ def isoelastic_coin_minus_labor(
 
     # disutility from labor
     util_l = total_labor * labor_coefficient
+
+    # Net utility
+    util = util_c - util_l
+
+    return util
+
+
+def coin_minus_quadratic_labor(
+    coin_endowment, total_labor, labor_exponent, labor_coefficient
+):
+    """Agent utility, linearly increasing in coin and quadratically decreasing in labor.
+
+    Args:
+        coin_endowment (float, ndarray): The amount of coin owned by the agent(s).
+        total_labor (float, ndarray): The amount of labor performed by the agent(s).
+        labor_exponent (float): Constant describing the shape of the utility profile
+            with respect to total labor. Must be between >1.
+        labor_coefficient (float): Constant describing the disutility experienced per
+            unit of labor performed. Disutility from labor equals:
+                labor_coefficient * total_labor
+
+    Returns:
+        Agent utility (float) or utilities (ndarray).
+    """
+    # https://en.wikipedia.org/wiki/Isoelastic_utility
+    assert np.all(coin_endowment >= 0)
+    assert labor_exponent > 1
+
+    # Utility from coin endowment
+    util_c = coin_endowment
+
+    # disutility from labor
+    util_l = (total_labor ** labor_exponent) * labor_coefficient
 
     # Net utility
     util = util_c - util_l
