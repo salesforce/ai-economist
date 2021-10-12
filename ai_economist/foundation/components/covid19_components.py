@@ -14,12 +14,19 @@ from ai_economist.foundation.base.base_component import (
     component_registry,
 )
 
-if len(GPUtil.getAvailable()) > 0:
-    from warp_drive.utils.constants import Constants
-    from warp_drive.utils.data_feed import DataFeed
+try:
+    num_gpus_available = len(GPUtil.getAvailable())
+    print(f"{num_gpus_available} GPUs are available.")
+    if num_gpus_available == 0:
+        print("No GPUs found! Running the simulation on a CPU.")
+    else:
+        from warp_drive.utils.constants import Constants
+        from warp_drive.utils.data_feed import DataFeed
 
-    _OBSERVATIONS = Constants.OBSERVATIONS
-    _ACTIONS = Constants.ACTIONS
+        _OBSERVATIONS = Constants.OBSERVATIONS
+        _ACTIONS = Constants.ACTIONS
+except ValueError:
+    print("No GPUs found! Running the simulation on a CPU.")
 
 
 @component_registry.add
