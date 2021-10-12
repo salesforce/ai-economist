@@ -21,15 +21,19 @@ from ai_economist.foundation.scenarios.covid19.covid19_env import (
     CovidAndEconomyEnvironment,
 )
 
-if len(GPUtil.getAvailable()) > 0:
+try:
+    num_gpus_available = len(GPUtil.getAvailable())
+    assert num_gpus_available > 0, "This training script needs a GPU machine to run!!"
+    print(f"{num_gpus_available} GPUs are available.")
     import torch
     import yaml
     from warp_drive.training.trainer import Trainer
     from warp_drive.training.utils.data_loader import create_and_push_data_placeholders
     from warp_drive.utils.env_registrar import CustomizedEnvironmentRegistrar
+except ValueError:
+    raise ValueError("This training script needs a GPU machine to run!!") from None
 
 pytorch_cuda_init_success = torch.cuda.FloatTensor(8)
-
 _COVID_AND_ECONOMY_ENVIRONMENT = "covid_and_economy_environment"
 
 # Usage:

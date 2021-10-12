@@ -14,13 +14,20 @@ import numpy as np
 from ai_economist.foundation.base.base_env import BaseEnvironment, scenario_registry
 from ai_economist.foundation.utils import verify_activation_code
 
-if len(GPUtil.getAvailable()) > 0:
-    from warp_drive.utils.constants import Constants
-    from warp_drive.utils.data_feed import DataFeed
+try:
+    num_gpus_available = len(GPUtil.getAvailable())
+    print(f"{num_gpus_available} GPUs are available.")
+    if num_gpus_available == 0:
+        print("No GPUs found! Running the simulation on a CPU.")
+    else:
+        from warp_drive.utils.constants import Constants
+        from warp_drive.utils.data_feed import DataFeed
 
-    _OBSERVATIONS = Constants.OBSERVATIONS
-    _ACTIONS = Constants.ACTIONS
-    _REWARDS = Constants.REWARDS
+        _OBSERVATIONS = Constants.OBSERVATIONS
+        _ACTIONS = Constants.ACTIONS
+        _REWARDS = Constants.REWARDS
+except ValueError:
+    print("No GPUs found! Running the simulation on a CPU.")
 
 
 @scenario_registry.add
@@ -347,14 +354,19 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.reward_normalization_factor = reward_normalization_factor
 
         # CUDA-related attributes (for GPU simulations)
-        # These will be set via the env_wrapper
+        # Note: these will be set / overwritten via the env_wrapper
         # use_cuda will be set to True (by the env_wrapper), if needed
         # to be simulated on the GPU
-        self.use_cuda = None
+        self.use_cuda = False
         self.cuda_data_manager = None
         self.cuda_function_manager = None
         self.cuda_step = lambda *args, **kwargs: None
         self.cuda_compute_reward = lambda *args, **kwargs: None
+
+        # Adding use_cuda to self.world for use in components
+        self.world.use_cuda = self.use_cuda
+        self.world.cuda_data_manager = self.cuda_data_manager
+        self.world.cuda_function_manager = self.cuda_function_manager
 
     name = "CovidAndEconomySimulation"
     agent_subclasses = ["BasicMobileAgent", "BasicPlanner"]
