@@ -15,7 +15,24 @@ from ai_economist.foundation.base.base_component import (
 @component_registry.add
 class SimpleLabor(BaseComponent):
     """
-    Implements how Agents' labor yields income.
+    Allows Agents to select a level of labor, which earns income based on skill.
+
+    Labor is "simple" because this simplfies labor to a choice along a 1D axis. More
+    concretely, this component adds 100 labor actions, each representing an amount of
+    work; each Agent earns income proportional to the product of its labor amount and
+    its skill, with higher skill and higher labor yielding higher income.
+
+    This component is intended to be used with the 'redistribution' component and the
+    'one_step_economy' scenario.
+
+    Args:
+        mask_first_step (bool): Defaults to True. If True, masks all non-0 labor
+            actions on the first step of the environment. When combined with the
+            intended component/scenario, the first env step is used to set taxes
+            (via the 'redistribution' component) and the second step is used to
+            select labor (via this component).
+        payment_max_skill_multiplier (float): When determining the skill level of
+            each Agent, sampled skills are clipped to this maximum value.
     """
 
     name = "SimpleLabor"
@@ -47,17 +64,13 @@ class SimpleLabor(BaseComponent):
         self.payment_max_skill_multiplier = float(payment_max_skill_multiplier)
         pmsm = self.payment_max_skill_multiplier
         num_agents = len(self.world.agents)
-        ranked_skills = np.array(
-            [
-                np.sort(
-                    np.minimum(
-                        pmsm, (pmsm - 1) * np.random.pareto(4, size=num_agents) + 1
-                    )
-                )
-                for _ in range(1000)
-            ]
-        )
-        self.skills = ranked_skills.mean(axis=0)
+        # Generate a batch (1000) of num_agents (sorted/clipped) Pareto samples
+        pareto_samples = np.random.pareto(4, size=(1000, num_agents)) + 1
+        clipped_skills = np.minimum(pmsm, (pmsm - 1) * pareto_samples)
+        sorted_clipped_skills = np.sort(clipped_skills, axis=1)
+        # The skill level of the i-th skill-ranked agent is the average of the
+        # i-th ranked samples throughout the batch
+        self.skills = sorted_clipped_skills.mean(axis=0)
 
     def get_additional_state_fields(self, agent_cls_name):
         if agent_cls_name == "BasicMobileAgent":
