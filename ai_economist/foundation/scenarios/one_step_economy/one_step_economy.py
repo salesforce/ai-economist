@@ -286,9 +286,7 @@ class OneStepEconomy(BaseEnvironment):
                 )
             elif self.agent_reward_type == "coin_minus_labor_cost":
                 assert labor_exponent > 1.0
-                curr_optimization_metric[
-                    agent.idx
-                ] = rewards.coin_minus_labor_cost(
+                curr_optimization_metric[agent.idx] = rewards.coin_minus_labor_cost(
                     coin_endowment=agent.total_endowment("Coin"),
                     total_labor=agent.state["endogenous"]["Labor"],
                     labor_exponent=labor_exponent,
