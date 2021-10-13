@@ -48,7 +48,7 @@ def isoelastic_coin_minus_labor(
     return util
 
 
-def coin_minus_quadratic_labor(
+def coin_minus_labor_cost(
     coin_endowment, total_labor, labor_exponent, labor_coefficient
 ):
     """Agent utility, linearly increasing in coin and quadratically decreasing in labor.

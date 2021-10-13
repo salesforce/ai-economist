@@ -33,11 +33,11 @@ class OneStepEconomy(BaseEnvironment):
 
     Args:
         agent_reward_type (str): The type of utility function used to compute each
-            agent's reward. Defaults to "coin_minus_quadratic_labor".
+            agent's reward. Defaults to "coin_minus_labor_cost".
         isoelastic_eta (float): The shape parameter of the isoelastic function used
             in the "isoelastic_coin_minus_labor" utility function.
         labor_exponent (float): The labor exponent parameter used in the
-            "coin_minus_quadratic_labor" utility function.
+            "coin_minus_labor_cost" utility function.
         labor_cost (float): The coefficient used to weight the cost of labor.
         planner_reward_type (str): The type of social welfare function (SWF) used to
             compute the planner's reward. Defaults to "inv_income_weighted_utility".
@@ -54,7 +54,7 @@ class OneStepEconomy(BaseEnvironment):
     def __init__(
         self,
         *base_env_args,
-        agent_reward_type="coin_minus_quadratic_labor",
+        agent_reward_type="coin_minus_labor_cost",
         isoelastic_eta=0.23,
         labor_exponent=2.0,
         labor_cost=1.0,
@@ -284,11 +284,11 @@ class OneStepEconomy(BaseEnvironment):
                     isoelastic_eta=isoelastic_eta,
                     labor_coefficient=labor_coefficient,
                 )
-            elif self.agent_reward_type == "coin_minus_quadratic_labor":
+            elif self.agent_reward_type == "coin_minus_labor_cost":
                 assert labor_exponent > 1.0
                 curr_optimization_metric[
                     agent.idx
-                ] = rewards.coin_minus_quadratic_labor(
+                ] = rewards.coin_minus_labor_cost(
                     coin_endowment=agent.total_endowment("Coin"),
                     total_labor=agent.state["endogenous"]["Labor"],
                     labor_exponent=labor_exponent,
