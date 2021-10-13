@@ -13,14 +13,38 @@ from ai_economist.foundation.scenarios.utils import rewards, social_metrics
 @scenario_registry.add
 class OneStepEconomy(BaseEnvironment):
     """
-    A simplified version of simple_wood_and_stone scenario
-    where both the planner and the agents each make a single
-    decision: the planner setting taxes and the agents choosing labor.
-    Each agent chooses an amount of labor that optimizes its post-tax utility,
-    and this optimal labor depends on its skill and the tax rates,
-    and it does not depend on the labor choices of other agents.
-    Before the agents act, the planner sets the marginal tax rates in order
-    to optimize social welfare, taken here to be utilitarian.
+    A simple model featuring one "step" of setting taxes and earning income.
+
+    As described in https://arxiv.org/abs/2108.02755:
+        A simplified version of simple_wood_and_stone scenario where both the planner
+        and the agents each make a single decision: the planner setting taxes and the
+        agents choosing labor. Each agent chooses an amount of labor that optimizes
+        its post-tax utility, and this optimal labor depends on its skill and the tax
+        rates, and it does not depend on the labor choices of other agents. Before
+        the agents act, the planner sets the marginal tax rates in order to optimize
+        social welfare.
+
+    Note:
+        This scenario is intended to be used with the 'PeriodicBracketTax' and
+        'SimpleLabor' components.
+        It should use an episode length of 2. (In the first step, taxes are set by
+        the planner via 'PeriodicBracketTax'. In the second, agents select how much
+        to work/earn via 'SimpleLabor'.)
+
+    Args:
+        agent_reward_type (str): The type of utility function used to compute each
+            agent's reward. Defaults to "coin_minus_quadratic_labor".
+        isoelastic_eta (float): The shape parameter of the isoelastic function used
+            in the "isoelastic_coin_minus_labor" utility function.
+        labor_exponent (float): The labor exponent parameter used in the
+            "coin_minus_quadratic_labor" utility function.
+        labor_cost (float): The coefficient used to weight the cost of labor.
+        planner_reward_type (str): The type of social welfare function (SWF) used to
+            compute the planner's reward. Defaults to "inv_income_weighted_utility".
+        mixing_weight_gini_vs_coin (float): Must be between 0 and 1 (inclusive).
+            Controls the weighting of equality and productivity when using SWF
+            "coin_eq_times_productivity", where a value of 0 (default) yields equal
+            weighting, and 1 only considers productivity.
     """
 
     name = "one-step-economy"
@@ -30,28 +54,25 @@ class OneStepEconomy(BaseEnvironment):
     def __init__(
         self,
         *base_env_args,
-        energy_cost=1,
-        energy_weight=1.0,
-        agent_reward_type="isoelastic_coin_minus_labor",
+        agent_reward_type="coin_minus_quadratic_labor",
         isoelastic_eta=0.23,
         labor_exponent=2.0,
+        labor_cost=1.0,
+        planner_reward_type="inv_income_weighted_utility",
         mixing_weight_gini_vs_coin=0,
-        planner_reward_type="coin_eq_times_productivity",
-        planner_starting_coin=0,
         **base_env_kwargs
     ):
         super().__init__(*base_env_args, **base_env_kwargs)
 
         self.num_agents = len(self.world.agents)
 
-        self.energy_cost = energy_cost
-        self.energy_weight = energy_weight
+        self.labor_cost = labor_cost
         self.agent_reward_type = agent_reward_type
         self.isoelastic_eta = isoelastic_eta
         self.labor_exponent = labor_exponent
-        self.mixing_weight_gini_vs_coin = mixing_weight_gini_vs_coin
         self.planner_reward_type = planner_reward_type
-        self.planner_starting_coin = planner_starting_coin
+        self.mixing_weight_gini_vs_coin = mixing_weight_gini_vs_coin
+        self.planner_starting_coin = 0
 
         self.curr_optimization_metrics = {str(a.idx): 0 for a in self.all_agents}
 
@@ -131,7 +152,7 @@ class OneStepEconomy(BaseEnvironment):
             self.world.agents,
             isoelastic_eta=float(self.isoelastic_eta),
             labor_exponent=float(self.labor_exponent),
-            labor_coefficient=self.energy_weight * self.energy_cost,
+            labor_coefficient=float(self.labor_cost),
         )
         planner_agents_rew = {
             k: v - self.curr_optimization_metrics[k]
@@ -159,7 +180,7 @@ class OneStepEconomy(BaseEnvironment):
             self.world.agents,
             isoelastic_eta=float(self.isoelastic_eta),
             labor_exponent=float(self.labor_exponent),
-            labor_coefficient=self.energy_weight * self.energy_cost,
+            labor_coefficient=float(self.labor_cost),
         )
 
     def scenario_metrics(self):
@@ -232,9 +253,6 @@ class OneStepEconomy(BaseEnvironment):
             metrics["endow/p/{}".format(resource)] = quantity
 
         metrics["util/p"] = self.curr_optimization_metrics[self.world.planner.idx]
-
-        # Labor weight
-        metrics["labor/weighted_cost"] = self.energy_cost * self.energy_weight
 
         return metrics
 
