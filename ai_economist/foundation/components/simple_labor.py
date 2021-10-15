@@ -18,12 +18,14 @@ class SimpleLabor(BaseComponent):
     Allows Agents to select a level of labor, which earns income based on skill.
 
     Labor is "simple" because this simplfies labor to a choice along a 1D axis. More
-    concretely, this component adds 100 labor actions, each representing an amount of
-    work; each Agent earns income proportional to the product of its labor amount and
-    its skill, with higher skill and higher labor yielding higher income.
+    concretely, this component adds 100 labor actions, each representing a choice of
+    how many hours to work, e.g. action 50 represents doing 50 hours of work; each
+    Agent earns income proportional to the product of its labor amount (representing
+    hours worked) and its skill (representing wage), with higher skill and higher labor
+    yielding higher income.
 
-    This component is intended to be used with the 'redistribution' component and the
-    'one_step_economy' scenario.
+    This component is intended to be used with the 'PeriodicBracketTax' component and
+    the 'one-step-economy' scenario.
 
     Args:
         mask_first_step (bool): Defaults to True. If True, masks all non-0 labor
@@ -47,7 +49,9 @@ class SimpleLabor(BaseComponent):
         **base_component_kwargs
     ):
         super().__init__(*base_component_args, **base_component_kwargs)
-        self.num_labor_hours = 100  # max 100 hours / week to work
+
+        # This defines the size of the action space (the max # hours an agent can work).
+        self.num_labor_hours = 100  # max 100 hours
 
         assert isinstance(mask_first_step, bool)
         self.mask_first_step = mask_first_step
@@ -64,12 +68,12 @@ class SimpleLabor(BaseComponent):
         self.payment_max_skill_multiplier = float(payment_max_skill_multiplier)
         pmsm = self.payment_max_skill_multiplier
         num_agents = len(self.world.agents)
-        # Generate a batch (1000) of num_agents (sorted/clipped) Pareto samples
+        # Generate a batch (1000) of num_agents (sorted/clipped) Pareto samples.
         pareto_samples = np.random.pareto(4, size=(1000, num_agents)) + 1
         clipped_skills = np.minimum(pmsm, (pmsm - 1) * pareto_samples)
         sorted_clipped_skills = np.sort(clipped_skills, axis=1)
         # The skill level of the i-th skill-ranked agent is the average of the
-        # i-th ranked samples throughout the batch
+        # i-th ranked samples throughout the batch.
         self.skills = sorted_clipped_skills.mean(axis=0)
 
     def get_additional_state_fields(self, agent_cls_name):
@@ -115,8 +119,7 @@ class SimpleLabor(BaseComponent):
                 agent.inventory["Coin"] += payoff
 
             else:
-                # We only declared 1 action for this agent type,
-                # so action > 1 is an error.
+                # If action > num_labor_hours, this is an error.
                 raise ValueError
 
     def generate_observations(self):

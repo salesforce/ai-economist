@@ -26,10 +26,10 @@ class OneStepEconomy(BaseEnvironment):
 
     Note:
         This scenario is intended to be used with the 'PeriodicBracketTax' and
-        'SimpleLabor' components.
-        It should use an episode length of 2. (In the first step, taxes are set by
-        the planner via 'PeriodicBracketTax'. In the second, agents select how much
-        to work/earn via 'SimpleLabor'.)
+            'SimpleLabor' components.
+        It should use an episode length of 2. In the first step, taxes are set by
+            the planner via 'PeriodicBracketTax'. In the second, agents select how much
+            to work/earn via 'SimpleLabor'.
 
     Args:
         agent_reward_type (str): The type of utility function used to compute each
@@ -272,7 +272,7 @@ class OneStepEconomy(BaseEnvironment):
 
         pretax_incomes = np.array([agent.state["production"] for agent in agents])
 
-        # (for agents)
+        # Optimization metric for agents:
         for agent in agents:
             if self.agent_reward_type == "isoelastic_coin_minus_labor":
                 assert 0.0 <= isoelastic_eta <= 1.0
@@ -292,7 +292,7 @@ class OneStepEconomy(BaseEnvironment):
                     labor_exponent=labor_exponent,
                     labor_coefficient=labor_coefficient,
                 )
-        # (for the planner)
+        # Optimization metric for the planner:
         if self.planner_reward_type == "coin_eq_times_productivity":
             curr_optimization_metric[
                 self.world.planner.idx
@@ -300,13 +300,6 @@ class OneStepEconomy(BaseEnvironment):
                 coin_endowments=coin_endowments,
                 equality_weight=1 - self.mixing_weight_gini_vs_coin,
             )
-        elif self.planner_reward_type == "inv_income_weighted_coin_endowments":
-            raise NotImplementedError
-            # curr_optimization_metric[
-            #     self.world.planner.idx
-            # ] = rewards.inv_income_weighted_coin_endowments(
-            #     coin_endowments=coin_endowments,
-            # )
         elif self.planner_reward_type == "inv_income_weighted_utility":
             curr_optimization_metric[
                 self.world.planner.idx

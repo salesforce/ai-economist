@@ -51,7 +51,7 @@ def isoelastic_coin_minus_labor(
 def coin_minus_labor_cost(
     coin_endowment, total_labor, labor_exponent, labor_coefficient
 ):
-    """Agent utility, linearly increasing in coin and quadratically decreasing in labor.
+    """Agent utility, linearly increasing in coin and decreasing as a power of labor.
 
     Args:
         coin_endowment (float, ndarray): The amount of coin owned by the agent(s).
@@ -60,7 +60,7 @@ def coin_minus_labor_cost(
             with respect to total labor. Must be between >1.
         labor_coefficient (float): Constant describing the disutility experienced per
             unit of labor performed. Disutility from labor equals:
-                labor_coefficient * total_labor
+                labor_coefficient * total_labor.
 
     Returns:
         Agent utility (float) or utilities (ndarray).
@@ -72,7 +72,7 @@ def coin_minus_labor_cost(
     # Utility from coin endowment
     util_c = coin_endowment
 
-    # disutility from labor
+    # Disutility from labor
     util_l = (total_labor ** labor_exponent) * labor_coefficient
 
     # Net utility
