@@ -387,6 +387,12 @@ class World:
 
         self.timestep = 0
 
+        # CUDA-related attributes (for GPU simulations).
+        # These will be set via the env_wrapper, if required.
+        self.use_cuda = False
+        self.cuda_function_manager = None
+        self.cuda_data_manager = None
+
     @property
     def agents(self):
         """Return a list of the agent objects in the world (sorted by index)."""

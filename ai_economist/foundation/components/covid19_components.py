@@ -6,12 +6,27 @@
 
 from datetime import datetime
 
+import GPUtil
 import numpy as np
 
 from ai_economist.foundation.base.base_component import (
     BaseComponent,
     component_registry,
 )
+
+try:
+    num_gpus_available = len(GPUtil.getAvailable())
+    print(f"{num_gpus_available} GPUs are available.")
+    if num_gpus_available == 0:
+        print("No GPUs found! Running the simulation on a CPU.")
+    else:
+        from warp_drive.utils.constants import Constants
+        from warp_drive.utils.data_feed import DataFeed
+
+        _OBSERVATIONS = Constants.OBSERVATIONS
+        _ACTIONS = Constants.ACTIONS
+except ValueError:
+    print("No GPUs found! Running the simulation on a CPU.")
 
 
 @component_registry.add
@@ -86,57 +101,118 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
                     self.masks["a"][:, agent.idx] = self.default_agent_action_mask
         return self.masks
 
+    def get_data_dictionary(self):
+        """
+        Create a dictionary of data to push to the GPU (device).
+        """
+        data_dict = DataFeed()
+        data_dict.add_data(
+            name="action_cooldown_period",
+            data=self.action_cooldown_period,
+        )
+        data_dict.add_data(
+            name="action_in_cooldown_until",
+            data=self.action_in_cooldown_until,
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="num_stringency_levels",
+            data=self.n_stringency_levels,
+        )
+        data_dict.add_data(
+            name="default_agent_action_mask",
+            data=[1] + self.default_agent_action_mask,
+        )
+        data_dict.add_data(
+            name="no_op_agent_action_mask",
+            data=[1] + self.no_op_agent_action_mask,
+        )
+        return data_dict
+
+    def get_tensor_dictionary(self):
+        """
+        Create a dictionary of (Pytorch-accesible) data to push to the GPU (device).
+        """
+        tensor_dict = DataFeed()
+        return tensor_dict
+
     def component_step(self):
-        if not self._checked_n_stringency_levels:
-            if self.n_stringency_levels != self.world.n_stringency_levels:
-                raise ValueError(
-                    "The environment was not configured correctly. For the given "
-                    "model fit, you need to set the number of stringency levels to "
-                    "be {}".format(self.world.n_stringency_levels)
-                )
-            self._checked_n_stringency_levels = True
-
-        for agent in self.world.agents:
-            if self.world.use_real_world_policies:
-                # Use the action taken in the previous timestep
-                action = self.world.real_world_stringency_policy[
-                    self.world.timestep - 1, agent.idx
-                ]
-            else:
-                action = agent.get_component_action(self.name)
-            assert 0 <= action <= self.n_stringency_levels
-
-            # We only update the stringency level if the action is not a NO-OP.
-            self.world.global_state["Stringency Level"][
-                self.world.timestep, agent.idx
-            ] = (
-                self.world.global_state["Stringency Level"][
-                    self.world.timestep - 1, agent.idx
-                ]
-                * (action == 0)
-                + action
+        if self.world.use_cuda:
+            self.world.cuda_component_step[self.name](
+                self.world.cuda_data_manager.device_data("stringency_level"),
+                self.world.cuda_data_manager.device_data("action_cooldown_period"),
+                self.world.cuda_data_manager.device_data("action_in_cooldown_until"),
+                self.world.cuda_data_manager.device_data("default_agent_action_mask"),
+                self.world.cuda_data_manager.device_data("no_op_agent_action_mask"),
+                self.world.cuda_data_manager.device_data("num_stringency_levels"),
+                self.world.cuda_data_manager.device_data(f"{_ACTIONS}_a"),
+                self.world.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_a_{self.name}-agent_policy_indicators"
+                ),
+                self.world.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_a_action_mask"
+                ),
+                self.world.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_p_{self.name}-agent_policy_indicators"
+                ),
+                self.world.cuda_data_manager.device_data("_timestep_"),
+                self.world.cuda_data_manager.meta_info("n_agents"),
+                self.world.cuda_data_manager.meta_info("episode_length"),
+                block=self.world.cuda_function_manager.block,
+                grid=self.world.cuda_function_manager.grid,
             )
+        else:
+            if not self._checked_n_stringency_levels:
+                if self.n_stringency_levels != self.world.n_stringency_levels:
+                    raise ValueError(
+                        "The environment was not configured correctly. For the given "
+                        "model fit, you need to set the number of stringency levels to "
+                        "be {}".format(self.world.n_stringency_levels)
+                    )
+                self._checked_n_stringency_levels = True
 
-            agent.state[
-                "Current Open Close Stringency Level"
-            ] = self.world.global_state["Stringency Level"][
-                self.world.timestep, agent.idx
-            ]
-
-            # Check if the action cooldown period has ended, and set the next time until
-            # action cooldown. If current action is a no-op (i.e., no new action was
-            # taken), the agent can take an action in the very next step, otherwise it
-            # needs to wait for self.action_cooldown_period steps.
-            # When in the action cooldown period, whatever actions the agents take are
-            # masked out, so it's always a NO-OP (see generate_masks() above)
-            # The logic below influences the action masks.
-            if self.world.timestep == self.action_in_cooldown_until[agent.idx] + 1:
-                if action == 0:  # NO-OP
-                    self.action_in_cooldown_until[agent.idx] += 1
+            for agent in self.world.agents:
+                if self.world.use_real_world_policies:
+                    # Use the action taken in the previous timestep
+                    action = self.world.real_world_stringency_policy[
+                        self.world.timestep - 1, agent.idx
+                    ]
                 else:
-                    self.action_in_cooldown_until[
-                        agent.idx
-                    ] += self.action_cooldown_period
+                    action = agent.get_component_action(self.name)
+                assert 0 <= action <= self.n_stringency_levels
+
+                # We only update the stringency level if the action is not a NO-OP.
+                self.world.global_state["Stringency Level"][
+                    self.world.timestep, agent.idx
+                ] = (
+                    self.world.global_state["Stringency Level"][
+                        self.world.timestep - 1, agent.idx
+                    ]
+                    * (action == 0)
+                    + action
+                )
+
+                agent.state[
+                    "Current Open Close Stringency Level"
+                ] = self.world.global_state["Stringency Level"][
+                    self.world.timestep, agent.idx
+                ]
+
+                # Check if the action cooldown period has ended, and set the next
+                # time until action cooldown. If current action is a no-op
+                # (i.e., no new action was taken), the agent can take an action
+                # in the very next step, otherwise it needs to wait for
+                # self.action_cooldown_period steps. When in the action cooldown
+                # period, whatever actions the agents take are masked out,
+                # so it's always a NO-OP (see generate_masks() above)
+                # The logic below influences the action masks.
+                if self.world.timestep == self.action_in_cooldown_until[agent.idx] + 1:
+                    if action == 0:  # NO-OP
+                        self.action_in_cooldown_until[agent.idx] += 1
+                    else:
+                        self.action_in_cooldown_until[
+                            agent.idx
+                        ] += self.action_cooldown_period
 
     def generate_observations(self):
 
@@ -242,55 +318,123 @@ class FederalGovernmentSubsidy(BaseComponent):
                 masks[self.world.planner.idx] = self.no_op_planner_action_mask
         return masks
 
+    def get_data_dictionary(self):
+        """
+        Create a dictionary of data to push to the device
+        """
+        data_dict = DataFeed()
+        data_dict.add_data(
+            name="subsidy_interval",
+            data=self.subsidy_interval,
+        )
+        data_dict.add_data(
+            name="num_subsidy_levels",
+            data=self.num_subsidy_levels,
+        )
+        data_dict.add_data(
+            name="max_daily_subsidy_per_state",
+            data=self.max_daily_subsidy_per_state,
+        )
+        data_dict.add_data(
+            name="default_planner_action_mask",
+            data=[1] + self.default_planner_action_mask,
+        )
+        data_dict.add_data(
+            name="no_op_planner_action_mask",
+            data=[1] + self.no_op_planner_action_mask,
+        )
+        return data_dict
+
+    def get_tensor_dictionary(self):
+        """
+        Create a dictionary of (Pytorch-accesible) data to push to the device
+        """
+        tensor_dict = DataFeed()
+        return tensor_dict
+
     def component_step(self):
-        if self.world.use_real_world_policies:
-            if self._subsidy_amount_per_level is None:
-                self._subsidy_amount_per_level = (
-                    self.world.us_population
-                    * self.max_annual_subsidy_per_person
-                    / self.num_subsidy_levels
-                    * self.subsidy_interval
-                    / 365
-                )
-                self._subsidy_level_array = np.zeros((self._episode_length + 1))
-            # Use the action taken in the previous timestep
-            current_subsidy_amount = self.world.real_world_subsidy[
-                self.world.timestep - 1
-            ]
-            if current_subsidy_amount > 0:
-                _subsidy_level = np.round(
-                    (current_subsidy_amount / self._subsidy_amount_per_level)
-                )
-                for t_idx in range(
-                    self.world.timestep - 1,
-                    min(
-                        len(self._subsidy_level_array),
-                        self.world.timestep - 1 + self.subsidy_interval,
-                    ),
-                ):
-                    self._subsidy_level_array[t_idx] += _subsidy_level
-            subsidy_level = self._subsidy_level_array[self.world.timestep - 1]
+        if self.world.use_cuda:
+            self.world.cuda_component_step[self.name](
+                self.world.cuda_data_manager.device_data("subsidy_level"),
+                self.world.cuda_data_manager.device_data("subsidy"),
+                self.world.cuda_data_manager.device_data("subsidy_interval"),
+                self.world.cuda_data_manager.device_data("num_subsidy_levels"),
+                self.world.cuda_data_manager.device_data("max_daily_subsidy_per_state"),
+                self.world.cuda_data_manager.device_data("default_planner_action_mask"),
+                self.world.cuda_data_manager.device_data("no_op_planner_action_mask"),
+                self.world.cuda_data_manager.device_data(f"{_ACTIONS}_p"),
+                self.world.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_a_{self.name}-t_until_next_subsidy"
+                ),
+                self.world.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_a_{self.name}-current_subsidy_level"
+                ),
+                self.world.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_p_{self.name}-t_until_next_subsidy"
+                ),
+                self.world.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_p_{self.name}-current_subsidy_level"
+                ),
+                self.world.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_p_action_mask"
+                ),
+                self.world.cuda_data_manager.device_data("_timestep_"),
+                self.world.cuda_data_manager.meta_info("n_agents"),
+                self.world.cuda_data_manager.meta_info("episode_length"),
+                block=self.world.cuda_function_manager.block,
+                grid=self.world.cuda_function_manager.grid,
+            )
         else:
-            # Update the subsidy level only every self.subsidy_interval, since the
-            # other actions are masked out.
-            if (self.world.timestep - 1) % self.subsidy_interval == 0:
-                subsidy_level = self.world.planner.get_component_action(self.name)
+            if self.world.use_real_world_policies:
+                if self._subsidy_amount_per_level is None:
+                    self._subsidy_amount_per_level = (
+                        self.world.us_population
+                        * self.max_annual_subsidy_per_person
+                        / self.num_subsidy_levels
+                        * self.subsidy_interval
+                        / 365
+                    )
+                    self._subsidy_level_array = np.zeros((self._episode_length + 1))
+                # Use the action taken in the previous timestep
+                current_subsidy_amount = self.world.real_world_subsidy[
+                    self.world.timestep - 1
+                ]
+                if current_subsidy_amount > 0:
+                    _subsidy_level = np.round(
+                        (current_subsidy_amount / self._subsidy_amount_per_level)
+                    )
+                    for t_idx in range(
+                        self.world.timestep - 1,
+                        min(
+                            len(self._subsidy_level_array),
+                            self.world.timestep - 1 + self.subsidy_interval,
+                        ),
+                    ):
+                        self._subsidy_level_array[t_idx] += _subsidy_level
+                subsidy_level = self._subsidy_level_array[self.world.timestep - 1]
             else:
-                subsidy_level = self.world.planner.state["Current Subsidy Level"]
+                # Update the subsidy level only every self.subsidy_interval, since the
+                # other actions are masked out.
+                if (self.world.timestep - 1) % self.subsidy_interval == 0:
+                    subsidy_level = self.world.planner.get_component_action(self.name)
+                else:
+                    subsidy_level = self.world.planner.state["Current Subsidy Level"]
 
-        assert 0 <= subsidy_level <= self.num_subsidy_levels
-        self.world.planner.state["Current Subsidy Level"] = np.array(
-            subsidy_level
-        ).astype(self.np_int_dtype)
+            assert 0 <= subsidy_level <= self.num_subsidy_levels
+            self.world.planner.state["Current Subsidy Level"] = np.array(
+                subsidy_level
+            ).astype(self.np_int_dtype)
 
-        # Update subsidy level
-        subsidy_level_frac = subsidy_level / self.num_subsidy_levels
-        daily_statewise_subsidy = subsidy_level_frac * self.max_daily_subsidy_per_state
+            # Update subsidy level
+            subsidy_level_frac = subsidy_level / self.num_subsidy_levels
+            daily_statewise_subsidy = (
+                subsidy_level_frac * self.max_daily_subsidy_per_state
+            )
 
-        self.world.global_state["Subsidy"][
-            self.world.timestep
-        ] = daily_statewise_subsidy
-        self.world.planner.state["Total Subsidy"] += np.sum(daily_statewise_subsidy)
+            self.world.global_state["Subsidy"][
+                self.world.timestep
+            ] = daily_statewise_subsidy
+            self.world.planner.state["Total Subsidy"] += np.sum(daily_statewise_subsidy)
 
     def generate_observations(self):
         # Allow the agents/planner to know when the next subsidy might come.
@@ -409,19 +553,72 @@ class VaccinationCampaign(BaseComponent):
     def generate_masks(self, completions=0):
         return {}  # Passive component
 
+    def get_data_dictionary(self):
+        """
+        Create a dictionary of data to push to the device
+        """
+        data_dict = DataFeed()
+        data_dict.add_data(
+            name="num_vaccines_per_delivery",
+            data=self.num_vaccines_per_delivery,
+        )
+        data_dict.add_data(
+            name="delivery_interval",
+            data=self.delivery_interval,
+        )
+        data_dict.add_data(
+            name="time_when_vaccine_delivery_begins",
+            data=self.time_when_vaccine_delivery_begins,
+        )
+        data_dict.add_data(
+            name="num_vaccines_available_t",
+            data=np.zeros(self.n_agents),
+            save_copy_and_apply_at_reset=True,
+        )
+        return data_dict
+
+    def get_tensor_dictionary(self):
+        """
+        Create a dictionary of (Pytorch-accesible) data to push to the device
+        """
+        tensor_dict = DataFeed()
+        return tensor_dict
+
     def component_step(self):
-        # Do nothing if vaccines are not available yet
-        if self.world.timestep < self.time_when_vaccine_delivery_begins:
-            return
+        if self.world.use_cuda:
+            self.world.cuda_component_step[self.name](
+                self.world.cuda_data_manager.device_data("vaccinated"),
+                self.world.cuda_data_manager.device_data("num_vaccines_per_delivery"),
+                self.world.cuda_data_manager.device_data("num_vaccines_available_t"),
+                self.world.cuda_data_manager.device_data("delivery_interval"),
+                self.world.cuda_data_manager.device_data(
+                    "time_when_vaccine_delivery_begins"
+                ),
+                self.world.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_a_{self.name}-t_until_next_vaccines"
+                ),
+                self.world.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_p_{self.name}-t_until_next_vaccines"
+                ),
+                self.world.cuda_data_manager.device_data("_timestep_"),
+                self.world.cuda_data_manager.meta_info("n_agents"),
+                self.world.cuda_data_manager.meta_info("episode_length"),
+                block=self.world.cuda_function_manager.block,
+                grid=self.world.cuda_function_manager.grid,
+            )
+        else:
+            # Do nothing if vaccines are not available yet
+            if self.world.timestep < self.time_when_vaccine_delivery_begins:
+                return
 
-        # Do nothing if this is not the start of a delivery interval.
-        # Vaccines are delivered at the start of each interval.
-        if (self.world.timestep % self.delivery_interval) != 0:
-            return
+            # Do nothing if this is not the start of a delivery interval.
+            # Vaccines are delivered at the start of each interval.
+            if (self.world.timestep % self.delivery_interval) != 0:
+                return
 
-        # Deliver vaccines to each state
-        for aidx, vaccines in enumerate(self.num_vaccines_per_delivery):
-            self.world.agents[aidx].state["Vaccines Available"] += vaccines
+            # Deliver vaccines to each state
+            for aidx, vaccines in enumerate(self.num_vaccines_per_delivery):
+                self.world.agents[aidx].state["Vaccines Available"] += vaccines
 
     def generate_observations(self):
         # Allow the agents/planner to know when the next vaccines might come.
