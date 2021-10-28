@@ -1,0 +1,143 @@
+# Copyright (c) 2021, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root
+# or https://opensource.org/licenses/BSD-3-Clause
+
+env:
+  components:
+  - Build:
+      build_labor: 10
+      payment: 10
+      payment_max_skill_multiplier: 3
+      skill_dist: pareto
+  - ContinuousDoubleAuction:
+      max_bid_ask: 10
+      max_num_orders: 5
+      order_duration: 50
+      order_labor: 0.25
+  - Gather:
+      collect_labor: 1
+      move_labor: 1
+      skill_dist: pareto
+  - PeriodicBracketTax:
+      bracket_spacing: us-federal
+      disable_taxes: false
+      period: 100
+      rate_disc: 0.05
+      tax_annealing_schedule:
+      - -100
+      - 0.001
+      tax_model: model_wrapper
+      usd_scaling: 1000
+  dense_log_frequency: 20
+  energy_cost: 0.21
+  energy_warmup_constant: 0
+  env_layout_file: quadrant_25x25_20each_30clump.txt
+  episode_length: 1000
+  fixed_four_skill_and_loc: true
+  flatten_masks: true
+  flatten_observations: true
+  isoelastic_eta: 0.23
+  multi_action_mode_agents: false
+  multi_action_mode_planner: true
+  n_agents: 4
+  planner_gets_spatial_info: false
+  planner_reward_type: coin_eq_times_productivity
+  scenario_name: layout_from_file/simple_wood_and_stone
+  starting_agent_coin: 0
+  world_size:
+  - 25
+  - 25
+general:
+  ckpt_frequency_steps: 20000000
+  cpus: 15
+  episodes: 4000000
+  gpus: 0
+  restore_tf_weights_agents: phase1/ckpts/agent.tf.weights.global-step-25000000 # path to phase 1 agent policy checkpoint
+  restore_tf_weights_planner: ''
+  train_planner: true
+agent_policy:
+  clip_param: 0.3
+  entropy_coeff: 0.025
+  entropy_coeff_schedule: null
+  gamma: 0.998
+  grad_clip: 10.0
+  kl_coeff: 0.0
+  kl_target: 0.01
+  lambda: 0.98
+  lr: 0.0003
+  lr_schedule: null
+  model:
+    custom_model: keras_conv_lstm
+    custom_options:
+      fc_dim: 128
+      idx_emb_dim: 4
+      input_emb_vocab: 100
+      lstm_cell_size: 128
+      num_conv: 2
+      num_fc: 2
+    max_seq_len: 25
+  use_gae: true
+  vf_clip_param: 50.0
+  vf_loss_coeff: 0.05
+  vf_share_layers: false
+planner_policy:
+  clip_param: 0.3
+  entropy_coeff: 0.125
+  entropy_coeff_schedule:
+  - - 0
+    - 2.0
+  - - 50000000
+    - 0.125
+  gamma: 0.998
+  grad_clip: 10.0
+  kl_coeff: 0.0
+  kl_target: 0.01
+  lambda: 0.98
+  lr: 0.0001
+  lr_schedule: null
+  model:
+    custom_model: keras_conv_lstm
+    custom_options:
+      fc_dim: 256
+      idx_emb_dim: 4
+      input_emb_vocab: 100
+      lstm_cell_size: 256
+      num_conv: 2
+      num_fc: 2
+    max_seq_len: 25
+  use_gae: true
+  vf_clip_param: 50.0
+  vf_loss_coeff: 0.05
+  vf_share_layers: false
+trainer:
+  batch_mode: truncate_episodes
+  env_config: null
+  local_tf_session_args:
+    inter_op_parallelism_threads: 2
+    intra_op_parallelism_threads: 24
+  metrics_smoothing_episodes: null
+  multiagent: null
+  no_done_at_end: false
+  num_envs_per_worker: 2
+  num_gpus: 0
+  num_gpus_per_worker: 0
+  num_sgd_iter: 1
+  num_workers: 15
+  observation_filter: NoFilter
+  rollout_fragment_length: 200
+  seed: null
+  sgd_minibatch_size: 1500
+  shuffle_sequences: true
+  tf_session_args:
+    allow_soft_placement: true
+    device_count:
+      CPU: 15
+      GPU: 0
+    gpu_options:
+      allow_growth: true
+    inter_op_parallelism_threads: 2
+    intra_op_parallelism_threads: 24
+    log_device_placement: false
+  train_batch_size: 6000
