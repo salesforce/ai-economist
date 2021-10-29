@@ -17,9 +17,9 @@ from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.rllib.utils import try_import_tf
 from tensorflow import keras
 
+# Disable TF INFO, WARNING, and ERROR messages
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 tf = try_import_tf()
-
 
 def apply_logit_mask(logits, mask):
     """Mask values of 1 are valid actions."
@@ -29,15 +29,20 @@ def apply_logit_mask(logits, mask):
 
     return logits + logit_mask
 
-
-WORLD_MAP_NAME = "world-map"
-WORLD_IDX_MAP_NAME = "world-idx_map"
-MASK_NAME = "action_mask"
-# GENERIC_NAME = "flat"
+_WORLD_MAP_NAME = "world-map"
+_WORLD_IDX_MAP_NAME = "world-idx_map"
+_MASK_NAME = "action_mask"
 
 
 class KerasConvLSTM(RecurrentTFModelV2):
-    """Example of using the Keras functional API to define a RNN model."""
+    """
+    The model used in the paper "The AI Economist: Optimal Economic Policy
+    Design via Two-level Deep Reinforcement Learning"
+    (https://arxiv.org/abs/2108.02755)
+    We combine convolutional, fully connected, and recurrent layers to process
+    spatial, non-spatial, and historical information, respectively.
+    For recurrent components, each agent maintains its own hidden state.
+    """
 
     custom_name = "keras_conv_lstm"
 
@@ -50,7 +55,6 @@ class KerasConvLSTM(RecurrentTFModelV2):
         num_fc = self.model_config["custom_options"]["num_fc"]
         fc_dim = self.model_config["custom_options"]["fc_dim"]
         cell_size = self.model_config["custom_options"]["lstm_cell_size"]
-
         generic_name = self.model_config["custom_options"].get("generic_name", None)
 
         self.cell_size = cell_size
@@ -83,21 +87,23 @@ class KerasConvLSTM(RecurrentTFModelV2):
             shape = (None,) + v.shape
             input_dict[k] = tf.keras.layers.Input(shape=shape, name=k)
             self._input_keys.append(k)
-            if k == MASK_NAME:
+            if k == _MASK_NAME:
                 pass
-            elif k == WORLD_MAP_NAME:
+            elif k == _WORLD_MAP_NAME:
                 conv_shape_r, conv_shape_c, conv_map_channels = (
                     v.shape[1],
                     v.shape[2],
                     v.shape[0],
                 )
                 found_world_map = True
-            elif k == WORLD_IDX_MAP_NAME:
+            elif k == _WORLD_IDX_MAP_NAME:
                 conv_idx_channels = v.shape[0] * emb_dim
                 found_world_idx = True
             else:
                 non_conv_input_keys.append(k)
 
+        # Cell state and hidden state for the
+        # policy and value function networks.
         state_in_h_p = tf.keras.layers.Input(shape=(cell_size,), name="h_pol")
         state_in_c_p = tf.keras.layers.Input(shape=(cell_size,), name="c_pol")
         state_in_h_v = tf.keras.layers.Input(shape=(cell_size,), name="h_val")
@@ -128,10 +134,10 @@ class KerasConvLSTM(RecurrentTFModelV2):
             )
 
             conv_input_map = tf.keras.layers.Permute((1, 3, 4, 2))(
-                input_dict[WORLD_MAP_NAME]
+                input_dict[_WORLD_MAP_NAME]
             )
             conv_input_idx = tf.keras.layers.Permute((1, 3, 4, 2))(
-                input_dict[WORLD_IDX_MAP_NAME]
+                input_dict[_WORLD_IDX_MAP_NAME]
             )
 
         else:
@@ -150,6 +156,7 @@ class KerasConvLSTM(RecurrentTFModelV2):
             None,
         )
 
+        # Define the policy and value function models
         for tag in ["_pol", "_val"]:
             if tag == "_pol":
                 state_in = [state_in_h_p, state_in_c_p]
@@ -228,7 +235,7 @@ class KerasConvLSTM(RecurrentTFModelV2):
 
             if tag == "_pol":
                 state_h_p, state_c_p = state_h, state_c
-                logits = apply_logit_mask(output, input_dict[MASK_NAME])
+                logits = apply_logit_mask(output, input_dict[_MASK_NAME])
             elif tag == "_val":
                 state_h_v, state_c_v = state_h, state_c
                 values = output
@@ -291,8 +298,10 @@ ModelCatalog.register_custom_model(KerasConvLSTM.custom_name, KerasConvLSTM)
 
 
 class RandomAction(TFModelV2):
-    """Custom model for policy gradient algorithms."""
-
+    """
+    A "random" model to sample actions from an action space at random.
+    This is used when not training an agent.
+    """
     custom_name = "random"
 
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
@@ -304,9 +313,8 @@ class RandomAction(TFModelV2):
             assert isinstance(obs_space, Dict)
             original_space = obs_space
 
-        self.MASK_NAME = "action_mask"
-        mask = original_space.spaces[self.MASK_NAME]
-        mask_input = keras.layers.Input(shape=mask.shape, name=self.MASK_NAME)
+        mask = original_space.spaces[_MASK_NAME]
+        mask_input = keras.layers.Input(shape=mask.shape, name=_MASK_NAME)
 
         self.inputs = [
             keras.layers.Input(shape=(1,), name="observations"),
@@ -330,7 +338,7 @@ class RandomAction(TFModelV2):
 
     def forward(self, input_dict, state, seq_lens):
         model_out, self.values = self.base_model(
-            [input_dict["obs_flat"][:, :1], input_dict["obs"][self.MASK_NAME]]
+            [input_dict["obs_flat"][:, :1], input_dict["obs"][_MASK_NAME]]
         )
         return model_out, state
 
