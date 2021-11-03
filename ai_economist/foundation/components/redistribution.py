@@ -117,7 +117,7 @@ class PeriodicBracketTax(BaseComponent):
             list of fixed marginal rates to use for each bracket. Length must be
             equal to the number of brackets (7 for "us-federal" spacing, n_brackets
             otherwise).
-        pareto_weight_type (str): Type of pareto weights to use when computing tax
+        pareto_weight_type (str): Type of Pareto weights to use when computing tax
             rates using the Saez formula. "inverse_income" (default) uses 1/z;
             "uniform" uses 1.
         saez_fixed_elas (float, optional): If supplied, this value will be used as
@@ -160,7 +160,7 @@ class PeriodicBracketTax(BaseComponent):
         # enabled, which can be useful for controlled tax/no-tax comparisons.
         self.disable_taxes = bool(disable_taxes)
 
-        # How to set taxes
+        # How to set taxes.
         self.tax_model = tax_model
         assert self.tax_model in [
             "model_wrapper",
@@ -169,7 +169,7 @@ class PeriodicBracketTax(BaseComponent):
             "fixed-bracket-rates",
         ]
 
-        # How many timesteps a tax period lasts
+        # How many timesteps a tax period lasts.
         self.period = int(period)
         assert self.period > 0
 
@@ -180,7 +180,7 @@ class PeriodicBracketTax(BaseComponent):
         assert 0 <= self.rate_min <= self.rate_max <= 1.0
 
         # Interval for discretizing tax rate options
-        # (only applies if tax_model == "model_wrapper")
+        # (only applies if tax_model == "model_wrapper").
         self.rate_disc = float(rate_disc)
 
         self.use_discretized_rates = self.tax_model == "model_wrapper"
@@ -258,7 +258,7 @@ class PeriodicBracketTax(BaseComponent):
         self.curr_bracket_tax_rates = np.zeros_like(self.bracket_cutoffs)
         self.curr_rate_indices = [0 for _ in range(self.n_brackets)]
 
-        # === pareto weights, elasticity ===
+        # === Pareto weights, elasticity ===
         self.pareto_weight_type = pareto_weight_type
         self.elas_tm1 = 0.5
         self.elas_t = 0.5
@@ -271,14 +271,14 @@ class PeriodicBracketTax(BaseComponent):
             assert self._saez_fixed_elas >= 0
 
         # Size of the local buffer. In a distributed context, the global buffer size
-        # will be capped at n_replicas * _buffer_size
-        # NOTE: Saez will use random taxes until it has self._buffer_size samples
+        # will be capped at n_replicas * _buffer_size.
+        # NOTE: Saez will use random taxes until it has self._buffer_size samples.
         self._buffer_size = 500
         self._reached_min_samples = False
         self._additions_this_episode = 0
-        # Local buffer maintained by this replica
+        # Local buffer maintained by this replica.
         self._local_saez_buffer = []
-        # "Global" buffer obtained by combining local buffers of individual replicas
+        # "Global" buffer obtained by combining local buffers of individual replicas.
         self._global_saez_buffer = []
 
         self._saez_n_estimation_bins = 100
@@ -309,11 +309,11 @@ class PeriodicBracketTax(BaseComponent):
         self.taxes = []
 
         # === tax annealing ===
-        # for annealing of non-planner max taxes
+        # for annealing of non-planner max taxes.
         self._annealed_rate_max = float(self.rate_max)
         self._last_completions = 0
 
-        # for annealing of planner actions
+        # for annealing of planner actions.
         self.tax_annealing_schedule = tax_annealing_schedule
         if tax_annealing_schedule is not None:
             assert isinstance(self.tax_annealing_schedule, (tuple, list))
@@ -437,9 +437,9 @@ class PeriodicBracketTax(BaseComponent):
 
         See: https://www.nber.org/papers/w7628
         """
-        # Until we reach the min sample number, keep checking if we have reached it
+        # Until we reach the min sample number, keep checking if we have reached it.
         if not self._reached_min_samples:
-            # Note: self.saez_buffer includes the global buffer (if applicable)
+            # Note: self.saez_buffer includes the global buffer (if applicable).
             if len(self.saez_buffer) >= self._buffer_size:
                 self._reached_min_samples = True
 
@@ -454,9 +454,9 @@ class PeriodicBracketTax(BaseComponent):
 
         incomes_and_marginal_rates = np.array(self.saez_buffer)
 
-        # Elasticity assumed constant for all incomes
+        # Elasticity assumed constant for all incomes.
         # (Run this for the sake of tracking the estimate; will not actually use the
-        # estimate if using fixed elasticity.)
+        # estimate if using fixed elasticity).
         if update_elas_tm1:
             self.elas_tm1 = float(self.elas_t)
         if update_log_z0_tm1:
@@ -475,21 +475,22 @@ class PeriodicBracketTax(BaseComponent):
         if update_log_z0_tm1:
             self.log_z0_t = float(log_z0_t)
 
-        # If a fixed estimate has been specified, use it in the formulas below
+        # If a fixed estimate has been specified, use it in the formulas below.
         if self._saez_fixed_elas is not None:
             elas_t = float(self._saez_fixed_elas)
 
-        # Get Saez parameters at each income bin to compute a marginal tax rate schedule
+        # Get Saez parameters at each income bin
+        # to compute a marginal tax rate schedule.
         binned_gzs, binned_azs = self.get_binned_saez_welfare_weight_and_pareto_params(
             population_incomes=incomes_and_marginal_rates[:, 0]
         )
 
-        # Use the elasticity to compute this binned schedule using the Saez formula
+        # Use the elasticity to compute this binned schedule using the Saez formula.
         binned_marginal_tax_rates = self.get_saez_marginal_rates(
             binned_gzs, binned_azs, elas_t
         )
 
-        # Adapt the saez tax schedule to the tax brackets
+        # Adapt the saez tax schedule to the tax brackets.
         self.curr_bracket_tax_rates = np.clip(
             self.bracketize_schedule(
                 bin_marginal_rates=binned_marginal_tax_rates,
@@ -568,11 +569,11 @@ class PeriodicBracketTax(BaseComponent):
         if np.std(taus) < 1e-6:
             return float(elas_tm1), float(log_z0_tm1)
 
-        # Regressing log income against log 1-marginal_rate
+        # Regressing log income against log 1-marginal_rate.
         x = np.log(np.maximum(1 - np.array(taus), 1e-9))
         # (bias term)
         b = np.ones_like(x)
-        # Perform OLS
+        # Perform OLS.
         X = np.stack([x, b]).T  # Stack linear & bias terms
         Y = np.log(np.maximum(np.array(zs), 1e-9))  # Regression targets
         XXi = np.linalg.inv(X.T.dot(X))
@@ -612,13 +613,13 @@ class PeriodicBracketTax(BaseComponent):
             def p(i, counts):
                 return counts[i] / n_total
 
-            # Probability that an income is below the taxable threshold
+            # Probability that an income is below the taxable threshold.
             p_below = n_below / n_total
 
-            # pz = p(z' = z): probability that [binned] income z' occurs in bin z
+            # pz = p(z' = z): probability that [binned] income z' occurs in bin z.
             pz = [p(i, counts) for i in range(len(counts))] + [n_above / n_total]
 
-            # Pz = p(z' <= z): Probability z' is less-than or equal to z
+            # Pz = p(z' <= z): Probability z' is less-than or equal to z.
             cum_pz = [pz[0] + p_below]
             for p in pz[1:]:
                 cum_pz.append(clip(cum_pz[-1] + p, 0, 1.0))
@@ -636,55 +637,55 @@ class PeriodicBracketTax(BaseComponent):
             incomes_below = incomes[incomes < lefts[0]]
             incomes_above = incomes[incomes > lefts[-1]]
 
-            # The total (unnormalized) pareto weight of untaxable incomes
+            # The total (unnormalized) Pareto weight of untaxable incomes.
             if len(incomes_below) > 0:
                 pareto_weight_below = np.sum(pareto(np.maximum(incomes_below, 0)))
             else:
                 pareto_weight_below = 0
 
-            # The total (unnormalized) pareto weight within each bin
+            # The total (unnormalized) Pareto weight within each bin.
             if len(incomes_above) > 0:
                 pareto_weight_above = np.sum(pareto(incomes_above))
             else:
                 pareto_weight_above = 0
 
-            # The total (unnormalized) pareto weight within each bin
+            # The total (unnormalized) Pareto weight within each bin.
             pareto_weight_per_bin = counts * pareto(bin_z(lefts[:-1], lefts[1:]))
 
-            # The aggregate (unnormalized) pareto weight of all incomes
+            # The aggregate (unnormalized) Pareto weight of all incomes.
             cumulative_pareto_weights = pareto_weight_per_bin.sum()
             cumulative_pareto_weights += pareto_weight_below
             cumulative_pareto_weights += pareto_weight_above
 
-            # Normalize so that the pareto density sums to 1
+            # Normalize so that the Pareto density sums to 1.
             pareto_norm = cumulative_pareto_weights + 1e-9
             unnormalized_pareto_density = np.concatenate(
                 [pareto_weight_per_bin, [pareto_weight_above]]
             )
             normalized_pareto_density = unnormalized_pareto_density / pareto_norm
 
-            # Aggregate pareto weight of earners with income greater-than or equal to z
+            # Aggregate Pareto weight of earners with income greater-than or equal to z.
             cumulative_pareto_density_geq_z = np.cumsum(
                 normalized_pareto_density[::-1]
             )[::-1]
 
-            # Probability that [binned] income z' is greather-than or equal to z
+            # Probability that [binned] income z' is greather-than or equal to z.
             pz, _ = get_cumul(counts, incomes_below, incomes_above)
             cumulative_prob_geq_z = np.cumsum(pz[::-1])[::-1]
 
-            # Average (normalized) pareto weight of earners with income >= z
+            # Average (normalized) Pareto weight of earners with income >= z.
             geq_z_norm = cumulative_prob_geq_z + 1e-9
             avg_pareto_weight_geq_z = cumulative_pareto_density_geq_z / geq_z_norm
 
             def interpolate_gzs(gz):
                 # Assume incomes within a bin are evenly distributed within that bin
-                # and re-compute accordingly
+                # and re-compute accordingly.
                 gz_at_left_edge = gz[:-1]
                 gz_at_right_edge = gz[1:]
 
                 avg_bin_gz = 0.5 * (gz_at_left_edge + gz_at_right_edge)
                 # Re-attach the gz of the top tax rate (does not need to be
-                # interpolated)
+                # interpolated).
                 gzs = np.concatenate([avg_bin_gz, [gz[-1]]])
                 return gzs
 
@@ -740,12 +741,12 @@ class PeriodicBracketTax(BaseComponent):
         population_gz = compute_binned_g_distribution(counts, lefts, population_incomes)
         population_az = compute_binned_a_distribution(counts, lefts, population_incomes)
 
-        # Return the binned stats used to create a schedule of marginal rates
+        # Return the binned stats used to create a schedule of marginal rates.
         return population_gz, population_az
 
     @staticmethod
     def get_saez_marginal_rates(binned_gz, binned_az, elas, interpolate=True):
-        # Marginal rates within each income bin (last tau is the top tax rate)
+        # Marginal rates within each income bin (last tau is the top tax rate).
         taus = (1.0 - binned_gz) / (1.0 - binned_gz + binned_az * elas + 1e-9)
 
         if interpolate:
@@ -754,7 +755,7 @@ class PeriodicBracketTax(BaseComponent):
             last_real_rate = 0.0
             last_real_tidx = -1
             for i, tau in enumerate(taus):
-                # The current tax rate is a real number
+                # The current tax rate is a real number.
                 if not np.isnan(tau):
                     # This is the end of a gap. Interpolate.
                     if (i - last_real_tidx) > 1:
@@ -770,12 +771,12 @@ class PeriodicBracketTax(BaseComponent):
                             gap_indices, intermediate_rates
                         ):
                             taus[gap_index] = intermediate_rate
-                    # Update the tracker
+                    # Update the tracker.
                     last_real_rate = float(tau)
                     last_real_tidx = int(i)
 
                 # The current tax rate is a nan. Continue without updating
-                # the tracker (indicating the presence of a gap)
+                # the tracker (indicating the presence of a gap).
                 else:
                     pass
 
@@ -783,19 +784,19 @@ class PeriodicBracketTax(BaseComponent):
 
     def bracketize_schedule(self, bin_marginal_rates, bin_edges, bin_sizes):
         # Compute the amount of tax each bracket would collect
-        # if income was >= the right edge
+        # if income was >= the right edge.
         # Divide by the bracket size to get
-        # the average marginal rate within that bracket
+        # the average marginal rate within that bracket.
         last_bracket_total = 0
         bracket_avg_marginal_rates = []
         for b_idx, income in enumerate(self.bracket_cutoffs[1:]):
             # How much income occurs within each bin
-            # (including the open-ended, top "bin")
+            # (including the open-ended, top "bin").
             past_cutoff = np.maximum(0, income - bin_edges)
             bin_income = np.minimum(bin_sizes, past_cutoff)
 
             # To get the total taxes due,
-            # multiply the income within each bin by that bin's marginal rate
+            # multiply the income within each bin by that bin's marginal rate.
             bin_taxes = bin_marginal_rates * bin_income
             taxes_due = np.maximum(0, np.sum(bin_taxes))
 
@@ -805,7 +806,7 @@ class PeriodicBracketTax(BaseComponent):
             bracket_avg_marginal_rates.append(bracket_tax_burden / bracket_size)
             last_bracket_total = taxes_due
 
-        # The top bracket tax rate is computed directly already
+        # The top bracket tax rate is computed directly already.
         bracket_avg_marginal_rates.append(bin_marginal_rates[-1])
 
         bracket_rates = np.array(bracket_avg_marginal_rates)
@@ -874,7 +875,7 @@ class PeriodicBracketTax(BaseComponent):
                 effective_rate=effective_tax_rate,
             )
 
-            # Actually collect the taxes
+            # Actually collect the taxes.
             agent.state["inventory"]["Coin"] -= effective_taxes
             net_tax_revenue += effective_taxes
 
@@ -895,13 +896,13 @@ class PeriodicBracketTax(BaseComponent):
 
         self.taxes.append(tax_dict)
 
-        # Pre-compute some things that will be useful for generating observations
+        # Pre-compute some things that will be useful for generating observations.
         self._last_income_obs = np.array(self.last_income) / self.period
         self._last_income_obs_sorted = self._last_income_obs[
             np.argsort(self._last_income_obs)
         ]
 
-        # Fold this period's tax data into the saez buffer
+        # Fold this period's tax data into the saez buffer.
         if self.tax_model == "saez":
             self._update_saez_buffer(tax_dict)
 
@@ -916,7 +917,7 @@ class PeriodicBracketTax(BaseComponent):
         action space includes an action subspace for each of the tax brackets. Each
         such action space has as many actions as there are discretized tax rates.
         """
-        # Only the planner takes actions through this component
+        # Only the planner takes actions through this component.
         if agent_cls_name == "BasicPlanner":
             if self.tax_model == "model_wrapper" and not self.disable_taxes:
                 # For every bracket, the planner can select one of the discretized
@@ -926,7 +927,7 @@ class PeriodicBracketTax(BaseComponent):
                     for r in self.bracket_cutoffs
                 ]
 
-        # Return 0 (no added actions) if the other conditions aren't met
+        # Return 0 (no added actions) if the other conditions aren't met.
         return 0
 
     def get_additional_state_fields(self, agent_cls_name):
@@ -951,7 +952,7 @@ class PeriodicBracketTax(BaseComponent):
             # (cache this for faster obs generation)
             self._curr_rates_obs = np.array(self.curr_marginal_rates)
 
-        # 2. On the last day of the tax period: Get $-taxes AND update agent endowments
+        # 2. On the last day of the tax period: Get $-taxes AND update agent endowments.
         if self.tax_cycle_pos >= self.period:
             self.enact_taxes()
             self.tax_cycle_pos = 0
@@ -959,7 +960,7 @@ class PeriodicBracketTax(BaseComponent):
         else:
             self.taxes.append([])
 
-        # increment timestep
+        # increment timestep.
         self.tax_cycle_pos += 1
 
     def generate_observations(self):
@@ -1149,7 +1150,7 @@ class PeriodicBracketTax(BaseComponent):
             out["avg_effective_tax_rate"] = np.mean(self.all_effective_tax_rates)
             out["total_collected_taxes"] = float(self.total_collected_taxes)
 
-            # Indices of richest and poorest agents
+            # Indices of richest and poorest agents.
             agent_coin_endows = np.array(
                 [agent.total_endowment("Coin") for agent in self.world.agents]
             )
@@ -1165,13 +1166,13 @@ class PeriodicBracketTax(BaseComponent):
                     [tax_day[str(i)]["tax_paid"] for tax_day in tax_days]
                 )
                 # Report the overall tax rate over the episode
-                # for the richest and poorest agents
+                # for the richest and poorest agents.
                 out["avg_tax_rate/{}".format(tag)] = total_tax_paid / np.maximum(
                     0.001, total_income
                 )
 
             if self.tax_model == "saez":
-                # Include the running estimate of elasticity
+                # Include the running estimate of elasticity.
                 out["saez/estimated_elasticity"] = self.elas_tm1
 
         return out
