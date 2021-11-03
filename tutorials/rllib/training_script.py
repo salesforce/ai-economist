@@ -11,7 +11,7 @@ import sys
 import time
 
 import ray
-from tutorials.rllib.utils import remote, saving
+from utils import remote, saving
 import tf_models
 import yaml
 from env_wrapper import RLlibEnvWrapper

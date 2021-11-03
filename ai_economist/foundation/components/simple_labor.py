@@ -46,6 +46,7 @@ class SimpleLabor(BaseComponent):
         *base_component_args,
         mask_first_step=True,
         payment_max_skill_multiplier=3,
+        pareto_param=4.0,
         **base_component_kwargs
     ):
         super().__init__(*base_component_args, **base_component_kwargs)
@@ -65,6 +66,8 @@ class SimpleLabor(BaseComponent):
         }
 
         # Skill distribution
+        self.pareto_param = float(pareto_param)
+        assert self.pareto_param > 0
         self.payment_max_skill_multiplier = float(payment_max_skill_multiplier)
         pmsm = self.payment_max_skill_multiplier
         num_agents = len(self.world.agents)

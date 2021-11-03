@@ -27,9 +27,15 @@
 # Release 1.3 (2021-09-24)
 - Training code for training the COVID-19 and the economy environment on a GPU with WarpDrive
 - CUDA C scenario and component codes
-- Environment Wrapper
+- Environment wrapper
 - Environment CPU / GPU consistency checker
 
 # Release 1.4 (2021-10-15)
 - One-step economy scenario and the simple labor component
 - 3 more layout maps for the gather-trade-build scenario
+- Tutorials for multi-agent training with RLlib
+
+# Release 1.5 (2021-11-05)
+- Saez tax policy
+- Add the split-world scenario class
+- Extend fixed skill/starting location logic to more than 4 agents
