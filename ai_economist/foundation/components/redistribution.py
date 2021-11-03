@@ -244,7 +244,7 @@ class PeriodicBracketTax(BaseComponent):
 
         if self.tax_model == "us-federal-single-filer-2018-scaled":
             assert self.bracket_spacing == "us-federal"
-
+        
         if self.tax_model == "fixed-bracket-rates":
             assert isinstance(fixed_bracket_rates, (tuple, list))
             assert np.min(fixed_bracket_rates) >= 0
@@ -400,17 +400,21 @@ class PeriodicBracketTax(BaseComponent):
             return self.disc_rates[self.curr_rate_indices]
 
         if self.tax_model == "us-federal-single-filer-2018-scaled":
-            return np.minimum(
+            marginal_tax_bracket_rates = np.minimum(
                 np.array(self.us_federal_single_filer_2018_scaled), self.curr_rate_max
             )
+        elif self.tax_model == "saez":
+            marginal_tax_bracket_rates = np.minimum(
+                self.curr_bracket_tax_rates, self.curr_rate_max
+            )
+        elif self.tax_model == "fixed-bracket-rates":
+            marginal_tax_bracket_rates = np.minimum(
+                np.array(self.fixed_bracket_rates), self.curr_rate_max
+            )
+        else:
+            raise NotImplementedError
 
-        if self.tax_model == "saez":
-            return np.minimum(self.curr_bracket_tax_rates, self.curr_rate_max)
-
-        if self.tax_model == "fixed-bracket-rates":
-            return np.minimum(np.array(self.fixed_bracket_rates), self.curr_rate_max)
-
-        raise NotImplementedError
+        return marginal_tax_bracket_rates
 
     def set_new_period_rates_model(self):
         """Update taxes using actions from the tax model."""
@@ -629,10 +633,12 @@ class PeriodicBracketTax(BaseComponent):
         def compute_binned_g_distribution(counts, lefts, incomes):
             def pareto(z):
                 if self.pareto_weight_type == "uniform":
-                    return np.ones_like(z)
-                if self.pareto_weight_type == "inverse_income":
-                    return 1.0 / np.maximum(1, z)
-                raise NotImplementedError
+                    pareto_weights = np.ones_like(z)
+                elif self.pareto_weight_type == "inverse_income":
+                    pareto_weights = 1.0 / np.maximum(1, z)
+                else:
+                    raise NotImplementedError
+                return pareto_weights
 
             incomes_below = incomes[incomes < lefts[0]]
             incomes_above = incomes[incomes > lefts[-1]]
@@ -945,7 +951,7 @@ class PeriodicBracketTax(BaseComponent):
         if self.tax_cycle_pos == 1:
             if self.tax_model == "model_wrapper":
                 self.set_new_period_rates_model()
-
+            
             if self.tax_model == "saez":
                 self.compute_and_set_new_period_rates_from_saez_formula()
 
