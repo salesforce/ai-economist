@@ -244,7 +244,7 @@ class PeriodicBracketTax(BaseComponent):
 
         if self.tax_model == "us-federal-single-filer-2018-scaled":
             assert self.bracket_spacing == "us-federal"
-        
+
         if self.tax_model == "fixed-bracket-rates":
             assert isinstance(fixed_bracket_rates, (tuple, list))
             assert np.min(fixed_bracket_rates) >= 0
@@ -951,7 +951,7 @@ class PeriodicBracketTax(BaseComponent):
         if self.tax_cycle_pos == 1:
             if self.tax_model == "model_wrapper":
                 self.set_new_period_rates_model()
-            
+
             if self.tax_model == "saez":
                 self.compute_and_set_new_period_rates_from_saez_formula()
 
