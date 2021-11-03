@@ -10,8 +10,7 @@ import numpy as np
 from scipy import signal
 
 from ai_economist.foundation.base.base_env import BaseEnvironment, scenario_registry
-
-from ..utils import rewards, social_metrics
+from ai_economist.foundation.scenarios.utils import rewards, social_metrics
 
 
 @scenario_registry.add
@@ -81,7 +80,7 @@ class LayoutFromFile(BaseEnvironment):
         energy_warmup_method="decay",
         planner_reward_type="coin_eq_times_productivity",
         mixing_weight_gini_vs_coin=0.0,
-        **base_env_kwargs
+        **base_env_kwargs,
     ):
         super().__init__(*base_env_args, **base_env_kwargs)
 
@@ -187,7 +186,7 @@ class LayoutFromFile(BaseEnvironment):
                     np.sort(
                         np.minimum(
                             pmsm,
-                            (pmsm - 1) * np.random.pareto(4, size=self.n_agents) + 1
+                            (pmsm - 1) * np.random.pareto(4, size=self.n_agents) + 1,
                         )
                     )
                     for _ in range(100000)
@@ -212,7 +211,7 @@ class LayoutFromFile(BaseEnvironment):
 
             # Based on skill, assign each agent to one of the location groups
             skill_groups = np.floor(
-                np.arange(self.n_agents)*(4/self.n_agents),
+                np.arange(self.n_agents) * (4 / self.n_agents),
             ).astype(np.int)
             n_in_group = np.zeros(4, dtype=np.int)
             for g in skill_groups:
@@ -710,7 +709,11 @@ class SplitLayout(LayoutFromFile):
     name = "split_layout/simple_wood_and_stone"
 
     def __init__(
-        self, *args, water_row=None, skill_rank_of_top_agents=[0], **kwargs,
+        self,
+        *args,
+        water_row=None,
+        skill_rank_of_top_agents=None,
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
 
@@ -731,6 +734,9 @@ class SplitLayout(LayoutFromFile):
             self._source_maps[landmark] = landmark_map
 
         # Controls logic for which agents (by skill rank) get placed on the top
+        if skill_rank_of_top_agents is None:
+            skill_rank_of_top_agents = [0]
+
         if isinstance(skill_rank_of_top_agents, (int, float)):
             self.skill_rank_of_top_agents = [int(skill_rank_of_top_agents)]
         elif isinstance(skill_rank_of_top_agents, (tuple, list)):
@@ -752,8 +758,7 @@ class SplitLayout(LayoutFromFile):
             [
                 np.sort(
                     np.minimum(
-                        pmsm,
-                        (pmsm - 1) * np.random.pareto(4, size=self.n_agents) + 1
+                        pmsm, (pmsm - 1) * np.random.pareto(4, size=self.n_agents) + 1
                     ),
                 )
                 for _ in range(100000)
