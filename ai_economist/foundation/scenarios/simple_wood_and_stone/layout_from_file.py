@@ -181,20 +181,17 @@ class LayoutFromFile(BaseEnvironment):
             # Temporarily switch to a fixed seed for controlling randomness
             seed_state = np.random.get_state()
             np.random.seed(seed=1)
-            ranked_skills = np.array(
-                [
-                    np.sort(
-                        np.minimum(
-                            pmsm,
-                            (pmsm - 1) * np.random.pareto(4, size=self.n_agents) + 1,
-                        )
-                    )
-                    for _ in range(100000)
-                ]
-            )
-            np.random.set_state(seed_state)
 
-            self._avg_ranked_skill = ranked_skills.mean(axis=0) * bm.payment
+            # Generate a batch (100000) of num_agents (sorted/clipped) Pareto samples.
+            pareto_samples = np.random.pareto(4, size=(100000, self.n_agents))
+            clipped_skills = np.minimum(pmsm, (pmsm - 1) * pareto_samples + 1)
+            sorted_clipped_skills = np.sort(clipped_skills, axis=1)
+            # The skill level of the i-th skill-ranked agent is the average of the
+            # i-th ranked samples throughout the batch.
+            average_ranked_skills = sorted_clipped_skills.mean(axis=0)
+            self._avg_ranked_skill = average_ranked_skills * bm.payment
+
+            np.random.set_state(seed_state)
 
             # Fill in the starting location associated with each skill rank
             starting_ranked_locs = [
@@ -754,17 +751,14 @@ class SplitLayout(LayoutFromFile):
         bm = self.get_component("Build")
         assert bm.skill_dist == "pareto"
         pmsm = bm.payment_max_skill_multiplier
-        ranked_skills = np.array(
-            [
-                np.sort(
-                    np.minimum(
-                        pmsm, (pmsm - 1) * np.random.pareto(4, size=self.n_agents) + 1
-                    ),
-                )
-                for _ in range(100000)
-            ]
-        )
-        self._avg_ranked_skill = ranked_skills.mean(axis=0) * bm.payment
+        # Generate a batch (100000) of num_agents (sorted/clipped) Pareto samples.
+        pareto_samples = np.random.pareto(4, size=(100000, self.n_agents))
+        clipped_skills = np.minimum(pmsm, (pmsm - 1) * pareto_samples + 1)
+        sorted_clipped_skills = np.sort(clipped_skills, axis=1)
+        # The skill level of the i-th skill-ranked agent is the average of the
+        # i-th ranked samples throughout the batch.
+        average_ranked_skills = sorted_clipped_skills.mean(axis=0)
+        self._avg_ranked_skill = average_ranked_skills * bm.payment
         # Reverse the order so index 0 is the highest-skilled
         self._avg_ranked_skill = self._avg_ranked_skill[::-1]
 
