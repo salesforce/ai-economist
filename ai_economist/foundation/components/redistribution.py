@@ -514,13 +514,15 @@ class PeriodicBracketTax(BaseComponent):
     @property
     def saez_buffer(self):
         if not self._global_saez_buffer:
-            return self._local_saez_buffer
-        if self._additions_this_episode == 0:
-            return self._global_saez_buffer
-        return (
-            self._global_saez_buffer
-            + self._local_saez_buffer[-self._additions_this_episode :]
-        )
+            saez_buffer = self._local_saez_buffer
+        elif self._additions_this_episode == 0:
+            saez_buffer = self._global_saez_buffer
+        else:
+            saez_buffer = (
+                self._global_saez_buffer
+                + self._local_saez_buffer[-self._additions_this_episode :]
+            )
+        return saez_buffer
 
     def get_local_saez_buffer(self):
         return self._local_saez_buffer
