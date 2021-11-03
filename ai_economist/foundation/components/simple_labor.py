@@ -46,6 +46,7 @@ class SimpleLabor(BaseComponent):
         *base_component_args,
         mask_first_step=True,
         payment_max_skill_multiplier=3,
+        pareto_param=4.0,
         **base_component_kwargs
     ):
         super().__init__(*base_component_args, **base_component_kwargs)
@@ -65,11 +66,15 @@ class SimpleLabor(BaseComponent):
         }
 
         # Skill distribution
+        self.pareto_param = float(pareto_param)
+        assert self.pareto_param > 0
         self.payment_max_skill_multiplier = float(payment_max_skill_multiplier)
         pmsm = self.payment_max_skill_multiplier
         num_agents = len(self.world.agents)
         # Generate a batch (1000) of num_agents (sorted/clipped) Pareto samples.
-        pareto_samples = np.random.pareto(4, size=(1000, num_agents)) + 1
+        pareto_samples = (
+            np.random.pareto(self.pareto_param, size=(1000, num_agents)) + 1
+        )
         clipped_skills = np.minimum(pmsm, (pmsm - 1) * pareto_samples)
         sorted_clipped_skills = np.sort(clipped_skills, axis=1)
         # The skill level of the i-th skill-ranked agent is the average of the

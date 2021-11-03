@@ -21,6 +21,30 @@ from tensorflow import keras
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 tf = try_import_tf()
 
+_WORLD_MAP_NAME = "world-map"
+_WORLD_IDX_MAP_NAME = "world-idx_map"
+_MASK_NAME = "action_mask"
+
+
+def get_flat_obs_size(obs_space):
+    if isinstance(obs_space, Box):
+        return np.prod(obs_space.shape)
+    elif not isinstance(obs_space, Dict):
+        raise TypeError
+
+    def rec_size(obs_dict_space, n=0):
+        for subspace in obs_dict_space.spaces.values():
+            if isinstance(subspace, Box):
+                n = n + np.prod(subspace.shape)
+            elif isinstance(subspace, Dict):
+                n = rec_size(subspace, n=n)
+            else:
+                raise TypeError
+        return n
+
+    return rec_size(obs_space)
+
+
 def apply_logit_mask(logits, mask):
     """Mask values of 1 are valid actions."
     " Add huge negative values to logits with 0 mask values."""
@@ -28,10 +52,6 @@ def apply_logit_mask(logits, mask):
     logit_mask = logit_mask * (1 - mask)
 
     return logits + logit_mask
-
-_WORLD_MAP_NAME = "world-map"
-_WORLD_IDX_MAP_NAME = "world-idx_map"
-_MASK_NAME = "action_mask"
 
 
 class KerasConvLSTM(RecurrentTFModelV2):
@@ -297,6 +317,72 @@ class KerasConvLSTM(RecurrentTFModelV2):
 ModelCatalog.register_custom_model(KerasConvLSTM.custom_name, KerasConvLSTM)
 
 
+class KerasLinear(TFModelV2):
+    """A linear (feed-forward) model."""
+
+    custom_name = "keras_linear"
+
+    def __init__(self, obs_space, action_space, num_outputs, model_config, name):
+        super().__init__(obs_space, action_space, num_outputs, model_config, name)
+        self.MASK_NAME = "action_mask"
+        mask = obs_space.original_space.spaces[self.MASK_NAME]
+        mask_input = tf.keras.layers.Input(shape=mask.shape, name=self.MASK_NAME)
+
+        custom_options = model_config["custom_options"]
+        if custom_options.get('fully_connected_value', False):
+            self.fc_dim = int(custom_options["fc_dim"])
+            self.num_fc = int(custom_options["num_fc"])
+        else:
+            self.fc_dim = 0
+            self.num_fc = 0
+
+        self.inputs = [
+            tf.keras.layers.Input(
+                shape=(get_flat_obs_size(obs_space),), name="observations"
+            ),
+            mask_input,
+        ]
+
+        logits = tf.keras.layers.Dense(
+            self.num_outputs, activation=tf.keras.activations.linear, name="logits"
+        )(self.inputs[0])
+        logits = apply_logit_mask(logits, mask_input)
+
+        if custom_options.get('fully_connected_value', False):
+            # Value function is fully connected
+            fc_layers_val = keras.Sequential(name='fc_layers_val')
+            for i in range(self.num_fc):
+                fc_layers_val.add(
+                    keras.layers.Dense(self.fc_dim,
+                                       activation=tf.nn.relu,
+                                       name="fc_layers_val-{}".format(i))
+                )
+            h_val = fc_layers_val(self.inputs[0])
+            values = tf.keras.layers.Dense(
+                1, activation=tf.keras.activations.linear, name="values"
+            )(h_val)
+        else:
+            # Value function is linear
+            values = tf.keras.layers.Dense(
+                1, activation=tf.keras.activations.linear, name="values"
+            )(self.inputs[0])
+
+        self.base_model = tf.keras.Model(self.inputs, [logits, values])
+        self.register_variables(self.base_model.variables)
+
+    def forward(self, input_dict, state, seq_lens):
+        model_out, self._value_out = self.base_model(
+            [input_dict["obs_flat"], input_dict["obs"][self.MASK_NAME]]
+        )
+        return model_out, state
+
+    def value_function(self):
+        return tf.reshape(self._value_out, [-1])
+
+
+ModelCatalog.register_custom_model(KerasLinear.custom_name, KerasLinear)
+
+
 class RandomAction(TFModelV2):
     """
     A "random" model to sample actions from an action space at random.
@@ -346,4 +432,4 @@ class RandomAction(TFModelV2):
         return tf.reshape(self.values, [-1])
 
 
-ModelCatalog.register_custom_model("random", RandomAction)
+ModelCatalog.register_custom_model(RandomAction.custom_name, RandomAction)
