@@ -76,6 +76,16 @@ class OneStepEconomy(BaseEnvironment):
 
         self.curr_optimization_metrics = {str(a.idx): 0 for a in self.all_agents}
 
+    # The following methods must be implemented for each scenario
+    # -----------------------------------------------------------
+    def reset_starting_layout(self):
+        """
+        Part 1/2 of scenario reset. This method handles resetting the state of the
+        environment managed by the scenario (i.e. resource & landmark layout).
+
+        Here, generate a resource source layout consistent with target parameters.
+        """
+
     def reset_agent_states(self):
         """
         Part 2/2 of scenario reset. This method handles resetting the state of the
@@ -93,6 +103,17 @@ class OneStepEconomy(BaseEnvironment):
             agent.state["endogenous"] = {k: 0 for k in agent.state["endogenous"].keys()}
 
         self.world.planner.inventory["Coin"] = self.planner_starting_coin
+
+    def scenario_step(self):
+        """
+        Update the state of the world according to whatever rules this scenario
+        implements.
+
+        This gets called in the 'step' method (of base_env) after going through each
+        component step and before generating observations, rewards, etc.
+
+        NOTE: does not take agent actions into account.
+        """
 
     def generate_observations(self):
         """
