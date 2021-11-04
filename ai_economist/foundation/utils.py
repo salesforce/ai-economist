@@ -6,25 +6,13 @@
 
 import json
 import os
-import random
 import sys
 from hashlib import sha512
 
 import lz4.frame
-import numpy as np
 from Crypto.PublicKey import RSA
 
-from ai_economist.foundation.base.base_env import BaseEnvironment  # isort:skip
-
-
-def parse_multitype_seq(yml_node):
-    if not isinstance(yml_node, list):
-        return (lambda: yml_node), False
-    if yml_node[0].lower() == "uniform":
-        return (lambda: np.random.uniform(yml_node[1], yml_node[2])), True
-    if yml_node[0].lower() == "uniform_discrete":
-        return (lambda: random.choice(yml_node[1:])), True
-    raise ValueError()
+from ai_economist.foundation.base.base_env import BaseEnvironment
 
 
 def save_episode_log(game_object, filepath, compression_level=16):

@@ -10,8 +10,7 @@ import numpy as np
 from scipy import signal
 
 from ai_economist.foundation.base.base_env import BaseEnvironment, scenario_registry
-
-from ..utils import rewards, social_metrics
+from ai_economist.foundation.scenarios.utils import rewards, social_metrics
 
 
 @scenario_registry.add
@@ -35,10 +34,11 @@ class LayoutFromFile(BaseEnvironment):
         resource_regen_prob (float): Probability that an empty source tile will
             regenerate a new resource unit.
         fixed_four_skill_and_loc (bool): Whether to use a fixed set of build skills and
-            starting locations with 4 agents. False, by default.
+            starting locations, with agents grouped into starting locations based on
+            which skill quartile they are in. False, by default.
             True, for experiments in https://arxiv.org/abs/2004.13332.
-            Note: Requires that n_agents=4 and that the environment uses the "Build"
-            component with skill_dist="pareto".
+            Note: Requires that the environment uses the "Build" component with
+            skill_dist="pareto".
         starting_agent_coin (int, float): Amount of coin agents have at t=0. Defaults
             to zero coin.
         isoelastic_eta (float): Parameter controlling the shape of agent utility
@@ -80,7 +80,7 @@ class LayoutFromFile(BaseEnvironment):
         energy_warmup_method="decay",
         planner_reward_type="coin_eq_times_productivity",
         mixing_weight_gini_vs_coin=0.0,
-        **base_env_kwargs
+        **base_env_kwargs,
     ):
         super().__init__(*base_env_args, **base_env_kwargs)
 
@@ -174,7 +174,6 @@ class LayoutFromFile(BaseEnvironment):
 
         self.fixed_four_skill_and_loc = bool(fixed_four_skill_and_loc)
         if self.fixed_four_skill_and_loc:
-            assert self.n_agents == 4
             bm = self.get_component("Build")
             assert bm.skill_dist == "pareto"
             pmsm = bm.payment_max_skill_multiplier
@@ -182,27 +181,70 @@ class LayoutFromFile(BaseEnvironment):
             # Temporarily switch to a fixed seed for controlling randomness
             seed_state = np.random.get_state()
             np.random.seed(seed=1)
-            ranked_skills = np.array(
-                [
-                    np.sort(
-                        np.minimum(pmsm, (pmsm - 1) * np.random.pareto(4, size=4) + 1)
-                    )
-                    for _ in range(100000)
-                ]
-            )
+
+            # Generate a batch (100000) of num_agents (sorted/clipped) Pareto samples.
+            pareto_samples = np.random.pareto(4, size=(100000, self.n_agents))
+            clipped_skills = np.minimum(pmsm, (pmsm - 1) * pareto_samples + 1)
+            sorted_clipped_skills = np.sort(clipped_skills, axis=1)
+            # The skill level of the i-th skill-ranked agent is the average of the
+            # i-th ranked samples throughout the batch.
+            average_ranked_skills = sorted_clipped_skills.mean(axis=0)
+            self._avg_ranked_skill = average_ranked_skills * bm.payment
+
             np.random.set_state(seed_state)
 
-            self._avg_ranked_skill = ranked_skills.mean(axis=0) * bm.payment
-            self._ranked_locs = [
-                # Worst agent goes in top right
+            # Fill in the starting location associated with each skill rank
+            starting_ranked_locs = [
+                # Worst group of agents goes in top right
                 (0, self.world_size[1] - 1),
-                # Second worst agent goes in bottom left
+                # Second worst group of agents goes in bottom left
                 (self.world_size[0] - 1, 0),
-                # Second best agent goes in top left
+                # Second best group of agents goes in top left
                 (0, 0),
-                # Best agent goes in bottom right
+                # Best group of agents goes in bottom right
                 (self.world_size[1] - 1, self.world_size[1] - 1),
             ]
+            self._ranked_locs = []
+
+            # Based on skill, assign each agent to one of the location groups
+            skill_groups = np.floor(
+                np.arange(self.n_agents) * (4 / self.n_agents),
+            ).astype(np.int)
+            n_in_group = np.zeros(4, dtype=np.int)
+            for g in skill_groups:
+                # The position within the group is given by the number of agents
+                # counted in the group thus far.
+                g_pos = n_in_group[g]
+
+                # Top right
+                if g == 0:
+                    r = starting_ranked_locs[g][0] + (g_pos // 4)
+                    c = starting_ranked_locs[g][1] - (g_pos % 4)
+                    self._ranked_locs.append((r, c))
+
+                # Bottom left
+                elif g == 1:
+                    r = starting_ranked_locs[g][0] - (g_pos // 4)
+                    c = starting_ranked_locs[g][1] + (g_pos % 4)
+                    self._ranked_locs.append((r, c))
+
+                # Top left
+                elif g == 2:
+                    r = starting_ranked_locs[g][0] + (g_pos // 4)
+                    c = starting_ranked_locs[g][1] + (g_pos % 4)
+                    self._ranked_locs.append((r, c))
+
+                # Bottom right
+                elif g == 3:
+                    r = starting_ranked_locs[g][0] - (g_pos // 4)
+                    c = starting_ranked_locs[g][1] - (g_pos % 4)
+                    self._ranked_locs.append((r, c))
+
+                else:
+                    raise ValueError
+
+                # Count the agent we just placed.
+                n_in_group[g] = n_in_group[g] + 1
 
     @property
     def energy_weight(self):
@@ -612,3 +654,153 @@ class LayoutFromFile(BaseEnvironment):
         metrics["labor/warmup_integrator"] = int(self._auto_warmup_integrator)
 
         return metrics
+
+
+@scenario_registry.add
+class SplitLayout(LayoutFromFile):
+    """
+    Extends layout_from_file/simple_wood_and_stone to impose a row of water midway
+    through the map, uses a fixed set of pareto-distributed building skills (requires a
+    Build component), and places agents in the top/bottom depending on skill rank.
+
+    Args:
+        water_row (int): Row of the map where the water barrier is placed. Defaults
+        to half the world height.
+        skill_rank_of_top_agents (int, float, tuple, list): Index/indices specifying
+            which agent(s) to place in the top of the map. Indices refer to the skill
+            ranking, with 0 referring to the highest-skilled agent. Defaults to only
+            the highest-skilled agent in the top.
+        planner_gets_spatial_obs (bool): Whether the planner agent receives spatial
+            observations from the world.
+        full_observability (bool): Whether the mobile agents' spatial observation
+            includes the full world view or is instead an egocentric view.
+        mobile_agent_observation_range (int): If not using full_observability,
+            the spatial range (on each side of the agent) that is visible in the
+            spatial observations.
+        env_layout_file (str): Name of the layout file in ./map_txt/ to use.
+            Note: The world dimensions of that layout must match the world dimensions
+            argument used to construct the environment.
+        resource_regen_prob (float): Probability that an empty source tile will
+            regenerate a new resource unit.
+        starting_agent_coin (int, float): Amount of coin agents have at t=0. Defaults
+            to zero coin.
+        isoelastic_eta (float): Parameter controlling the shape of agent utility
+            wrt coin endowment.
+        energy_cost (float): Coefficient for converting labor to negative utility.
+        energy_warmup_constant (float): Decay constant that controls the rate at which
+            the effective energy cost is annealed from 0 to energy_cost. Set to 0
+            (default) to disable annealing, meaning that the effective energy cost is
+            always energy_cost. The units of the decay constant depend on the choice of
+            energy_warmup_method.
+        energy_warmup_method (str): How to schedule energy annealing (warmup). If
+            "decay" (default), use the number of completed episodes. If "auto",
+            use the number of timesteps where the average agent reward was positive.
+        planner_reward_type (str): The type of reward used for the planner. Options
+            are "coin_eq_times_productivity" (default),
+            "inv_income_weighted_coin_endowment", and "inv_income_weighted_utility".
+        mixing_weight_gini_vs_coin (float): Degree to which equality is ignored w/
+            "coin_eq_times_productivity". Default is 0, which weights equality and
+            productivity equally. If set to 1, only productivity is rewarded.
+    """
+
+    name = "split_layout/simple_wood_and_stone"
+
+    def __init__(
+        self,
+        *args,
+        water_row=None,
+        skill_rank_of_top_agents=None,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+
+        if self.fixed_four_skill_and_loc:
+            raise ValueError(
+                "The split layout scenario does not support "
+                "fixed_four_skill_and_loc. Set this to False."
+            )
+
+        # Augment the fixed layout to include a row of water through the middle
+        if water_row is None:
+            self._water_line = self.world_size[0] // 2
+        else:
+            self._water_line = int(water_row)
+            assert 0 < self._water_line < self.world_size[0] - 1
+        for landmark, landmark_map in self._source_maps.items():
+            landmark_map[self._water_line, :] = 1 if landmark == "Water" else 0
+            self._source_maps[landmark] = landmark_map
+
+        # Controls logic for which agents (by skill rank) get placed on the top
+        if skill_rank_of_top_agents is None:
+            skill_rank_of_top_agents = [0]
+
+        if isinstance(skill_rank_of_top_agents, (int, float)):
+            self.skill_rank_of_top_agents = [int(skill_rank_of_top_agents)]
+        elif isinstance(skill_rank_of_top_agents, (tuple, list)):
+            self.skill_rank_of_top_agents = list(set(skill_rank_of_top_agents))
+        else:
+            raise TypeError(
+                "skill_rank_of_top_agents must be a scalar "
+                "index, or a list of scalar indices."
+            )
+        for rank in self.skill_rank_of_top_agents:
+            assert 0 <= rank < self.n_agents
+        assert 0 < len(self.skill_rank_of_top_agents) < self.n_agents
+
+        # Set the skill associated with each skill rank
+        bm = self.get_component("Build")
+        assert bm.skill_dist == "pareto"
+        pmsm = bm.payment_max_skill_multiplier
+        # Generate a batch (100000) of num_agents (sorted/clipped) Pareto samples.
+        pareto_samples = np.random.pareto(4, size=(100000, self.n_agents))
+        clipped_skills = np.minimum(pmsm, (pmsm - 1) * pareto_samples + 1)
+        sorted_clipped_skills = np.sort(clipped_skills, axis=1)
+        # The skill level of the i-th skill-ranked agent is the average of the
+        # i-th ranked samples throughout the batch.
+        average_ranked_skills = sorted_clipped_skills.mean(axis=0)
+        self._avg_ranked_skill = average_ranked_skills * bm.payment
+        # Reverse the order so index 0 is the highest-skilled
+        self._avg_ranked_skill = self._avg_ranked_skill[::-1]
+
+    def additional_reset_steps(self):
+        """
+        Extra scenario-specific steps that should be performed at the end of the reset
+        cycle.
+
+        For each reset cycle...
+            First, reset_starting_layout() and reset_agent_states() will be called.
+
+            Second, <component>.reset() will be called for each registered component.
+
+            Lastly, this method will be called to allow for any final customization of
+            the reset cycle.
+
+        For this scenario, this method resets optimization metric trackers. This is
+        where each agent gets assigned to one of the skills and the starting
+        locations are reset according to self.skill_rank_of_top_agents.
+        """
+        self.world.clear_agent_locs()
+        for i, agent in enumerate(self.world.get_random_order_agents()):
+            agent.state["build_payment"] = self._avg_ranked_skill[i]
+            if i in self.skill_rank_of_top_agents:
+                r_min, r_max = 0, self._water_line
+            else:
+                r_min, r_max = self._water_line + 1, self.world_size[0]
+
+            r = np.random.randint(r_min, r_max)
+            c = np.random.randint(0, self.world_size[1])
+            n_tries = 0
+            while not self.world.can_agent_occupy(r, c, agent):
+                r = np.random.randint(r_min, r_max)
+                c = np.random.randint(0, self.world_size[1])
+                n_tries += 1
+                if n_tries > 200:
+                    raise TimeoutError
+            self.world.set_agent_loc(agent, r, c)
+
+        # compute current objectives
+        curr_optimization_metric = self.get_current_optimization_metrics()
+
+        self.curr_optimization_metric = deepcopy(curr_optimization_metric)
+        self.init_optimization_metric = deepcopy(curr_optimization_metric)
+        self.prev_optimization_metric = deepcopy(curr_optimization_metric)
