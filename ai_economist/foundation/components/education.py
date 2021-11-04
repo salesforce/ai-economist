@@ -11,15 +11,18 @@ class GetEducated(BaseComponent):
       self,
       *base_component_args,
       tuition=100, # same tuition cost as building 10 houses <- tweak later
-      build_labor=100.0,
+      education_labor=100.0,
+      skill_gain = 10
       **base_component_kwargs
   ):
       super().__init__(*base_component_args, **base_component_kwargs)
       self.tuition = int(tuition)
+      self.skill_gain = float(skill_gain)
       assert self.tuition >= 0
-      self.build_labor = float(build_labor)
-      assert self.build_labor >= 0
+      self.education_labor = float(education_labor)
+      assert self.education_labor >= 0
       # self.skill = int(skill)
+      self.educates = []
 
   def agent_can_get_educated(self, agent):
     """Return True if agent can actually get educated."""
@@ -88,30 +91,29 @@ class GetEducated(BaseComponent):
 
                   # Receive skills for going to school
                   # agent.state["inventory"]["Coin"] += agent.state["build_payment"]
-                  # TODO
+                  self.payment_max_skill_multiplier += self.skill_gain
 
-                  # Incur the labor cost for building
-                  agent.state["endogenous"]["Labor"] += self.build_labor
+                  # Incur the labor cost for going to school
+                  agent.state["endogenous"]["Labor"] += self.education_labor
 
-                  build.append(
-                      {
-                          "builder": agent.idx,
-                          "loc": np.array(agent.loc),
-                          "income": float(agent.state["build_payment"]),
-                      }
-                  )
+                #   build.append(
+                #       {
+                #           "student": agent.idx,
+                #           "loc": np.array(agent.loc),
+                #           "cost": float(agent.state["build_payment"]),
+                #       }
+                #   )
           else:
               raise ValueError
 
-      self.builds.append(build)
+    #   self.builds.append(build)
 
   def generate_observations(self):
       obs_dict = dict()
       for agent in self.world.agents:
           obs_dict[agent.idx] = {
-              "widget_refresh_rate": self.widget_refresh_rate,
-              "available_widget_units": self.available_widget_units,
-              "widget_price": self.widget_price
+              "education_reward": self.skill_gain,
+              "education_price": self.tuition
           }
 
       return obs_dict
