@@ -4,6 +4,12 @@
 # For full license text, see the LICENSE file in the repo root
 # or https://opensource.org/licenses/BSD-3-Clause
 
+import sys  
+from pathlib import Path  
+file = Path(__file__). resolve()  
+package_root_directory = file.parents [1]  
+sys.path.append(str(package_root_directory))  
+
 from ai_economist.foundation import utils
 from ai_economist.foundation.agents import agent_registry as agents
 from ai_economist.foundation.components import component_registry as components
