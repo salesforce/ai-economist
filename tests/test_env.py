@@ -51,6 +51,8 @@ class CreateEnv:
                 {"ContinuousDoubleAuction": {"max_num_orders": 5}},
                 # (3) Movement and resource collection
                 {"Gather": {}},
+                # (4) Let each mobile agent go to school
+                {'GetEducated': {'tuition':100, 'education_labor':100.0,'skill_gain': 10}}, 
             ],
             # ===== SCENARIO =====
             # Which scenario class to use
