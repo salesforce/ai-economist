@@ -43,12 +43,18 @@ extern "C" {
             // Time dependent arrays have shapes
             // (num_envs, kEpisodeLength + 1, kNumAgents - 1)
             // Time independent arrays have shapes (num_envs, kNumAgents - 1)
+
+            // Offset for all mobiles for this specific environment
             const int kArrayIdxOffset = kEnvId * (kEpisodeLength + 1) *
                 (kNumAgents - 1);
+            // Find chunk of agents for this timestep, then find location
+            // of this specific agent in this timestep chunk
             int time_dependent_array_index_curr_t = kArrayIdxOffset +
                 env_timestep_arr[kEnvId] * (kNumAgents - 1) + kAgentId;
+            // prev timestep location of this agent
             int time_dependent_array_index_prev_t = kArrayIdxOffset +
                 (env_timestep_arr[kEnvId] - 1) * (kNumAgents - 1) + kAgentId;
+            // index for the kth agent of this specific environment
             const int time_independent_array_index = kEnvId * (kNumAgents - 1) +
                 kAgentId;
 

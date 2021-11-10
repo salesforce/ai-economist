@@ -20,8 +20,8 @@ try:
     if num_gpus_available == 0:
         print("No GPUs found! Running the simulation on a CPU.")
     else:
-        from warp_drive.utils.constants import Constants
-        from warp_drive.utils.data_feed import DataFeed
+        from rl_warp_drive.utils.constants import Constants
+        from rl_warp_drive.utils.data_feed import DataFeed
 
         _OBSERVATIONS = Constants.OBSERVATIONS
         _ACTIONS = Constants.ACTIONS
@@ -586,6 +586,7 @@ class VaccinationCampaign(BaseComponent):
 
     def component_step(self):
         if self.world.use_cuda:
+            # cuda_component_step[self.name] inputs -> type declared in .cu file
             self.world.cuda_component_step[self.name](
                 self.world.cuda_data_manager.device_data("vaccinated"),
                 self.world.cuda_data_manager.device_data("num_vaccines_per_delivery"),

@@ -21,6 +21,7 @@ from ai_economist.foundation.scenarios.covid19.covid19_env import (
     CovidAndEconomyEnvironment,
 )
 
+# Fine
 try:
     num_gpus_available = len(GPUtil.getAvailable())
     assert num_gpus_available > 0, "This training script needs a GPU machine to run!!"
@@ -33,6 +34,7 @@ try:
 except ValueError:
     raise ValueError("This training script needs a GPU machine to run!!") from None
 
+# Probably can get rid of this part
 pytorch_cuda_init_success = torch.cuda.FloatTensor(8)
 _COVID_AND_ECONOMY_ENVIRONMENT = "covid_and_economy_environment"
 
@@ -50,6 +52,7 @@ if __name__ == "__main__":
 
     # Read the run configurations specific to each environment.
     # Note: The run config yamls can be edited at warp_drive/training/run_configs
+    # Prolly can get rid of this
     # ---------------------------------------------------------------------------
     assert args.env in [_COVID_AND_ECONOMY_ENVIRONMENT], (
         f"Currently, the only environment supported "
@@ -68,6 +71,10 @@ if __name__ == "__main__":
 
     # Create a wrapped environment object via the EnvWrapper
     # Ensure that use_cuda is set to True (in order to run on the GPU)
+    
+    # TBD: Change Path, get rid of config name, the build.cu file, 
+    # component cu file, step cu file - the last two are the annoying
+    # part 
     # ----------------------------------------------------------------
     if run_config["name"] == _COVID_AND_ECONOMY_ENVIRONMENT:
         env_registrar = CustomizedEnvironmentRegistrar()
@@ -90,6 +97,7 @@ if __name__ == "__main__":
     # Policy mapping to agent ids: agents can share models
     # The policy_tag_to_agent_id_map dictionary maps
     # policy model names to agent ids.
+    # Fine
     # ----------------------------------------------------
     if len(run_config["policy"].keys()) == 1:
         # Using a single (or shared policy) across all agents
