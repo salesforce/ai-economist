@@ -1,4 +1,21 @@
-# Foundation: An Economic Simulation Framework
+# Foundation: An Economic Simulation Framework That I Stole/Borrowed/Whatever From Salesforce
+
+Hello review people! Gonna borrow this readme to drop some notes re: what files to actually look at, since there are a ton of commits that aren't relevant at all.
+
+Code we wrote: 
+- ai-economist/ai_economist/foundation/components/education.py
+- ai-economist/ai_economist/foundation/components/build_step.cu
+
+Also made a YAML (think settings JSON) file if you guys are interested: 
+- ai-economist/training/run_configs/run_config_simple_wood_and_stone_environment.yaml
+
+Got prank'd by Salesforce more than I'd like, please enjoy :)
+
+~~
+
+And if you're interested, here's the rest of the OG README.md lol
+
+~~
 
 This repo contains an implementation of Foundation, a framework for flexible, modular, and composable environments that **model socio-economic behaviors and dynamics in a society with both agents and governments**.
 
