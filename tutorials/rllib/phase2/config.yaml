@@ -11,6 +11,10 @@ env:
       payment: 10
       payment_max_skill_multiplier: 3
       skill_dist: pareto
+  - GetEducated:
+      tuition: 100
+      education_labor: 100
+      skill_gain: 1
   - ContinuousDoubleAuction:
       max_bid_ask: 10
       max_num_orders: 5

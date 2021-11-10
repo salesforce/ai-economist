@@ -131,3 +131,31 @@ def inv_income_weighted_utility(coin_endowments, utilities):
     pareto_weights = 1 / np.maximum(coin_endowments, 1)
     pareto_weights = pareto_weights / np.sum(pareto_weights)
     return np.sum(utilities * pareto_weights)
+
+def prospect_theory_utility(
+    coin_endowment, total_labor, beta, lamb, delta
+):
+    """ # if do KR need decide what the reference is
+        prob weighting possible at all? How measure the true p?
+        Prospect theory utility with Koszegi Rabin utility
+        Prob weighting func from https://som.yale.edu/sites/default/files/files/11%20Probability%20Weighting.pdf
+        delta between 0 and 1
+        TODO: write documentation
+    """
+    # https://en.wikipedia.org/wiki/Isoelastic_utility
+    assert np.all(coin_endowment >= 0)
+    assert 0 <= delta <= 1.0
+
+    # Utility from coin endowment
+    if isoelastic_eta == 1.0:  # dangerous
+        util_c = np.log(np.max(1, coin_endowment))
+    else:  # isoelastic_eta >= 0
+        util_c = (coin_endowment ** (1 - isoelastic_eta) - 1) / (1 - isoelastic_eta)
+
+    # disutility from labor
+    util_l = total_labor * labor_coefficient
+
+    # Net utility
+    util = util_c - util_l
+
+    return util
