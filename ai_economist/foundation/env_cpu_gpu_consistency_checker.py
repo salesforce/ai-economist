@@ -14,9 +14,7 @@ import GPUtil
 
 try:
     num_gpus_available = len(GPUtil.getAvailable())
-    assert (
-        num_gpus_available > 0
-    ), "The env consistency checker needs a GPU to run!"
+    assert num_gpus_available > 0, "The env consistency checker needs a GPU to run!"
     print(f"{num_gpus_available} GPUs are available.")
     import torch
     from warp_drive.utils.constants import Constants
@@ -27,9 +25,7 @@ except ModuleNotFoundError:
         "'pip install rl-warp-drive' first."
     ) from None
 except ValueError:
-    raise ValueError(
-        "The env consistency checker needs a GPU to run!"
-    ) from None
+    raise ValueError("The env consistency checker needs a GPU to run!") from None
 
 import numpy as np
 from gym.spaces import Discrete, MultiDiscrete
