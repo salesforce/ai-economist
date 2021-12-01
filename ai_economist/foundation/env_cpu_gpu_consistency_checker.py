@@ -16,7 +16,7 @@ try:
     num_gpus_available = len(GPUtil.getAvailable())
     assert (
         num_gpus_available > 0
-    ), "The env. consistency checker needs a GPU machine to run!"
+    ), "The env consistency checker needs a GPU to run!"
     print(f"{num_gpus_available} GPUs are available.")
     import torch
     from warp_drive.utils.constants import Constants
@@ -28,7 +28,7 @@ except ModuleNotFoundError:
     ) from None
 except ValueError:
     raise ValueError(
-        "The env. consistency checker needs a GPU machine to run!"
+        "The env consistency checker needs a GPU to run!"
     ) from None
 
 import numpy as np
