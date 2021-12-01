@@ -21,7 +21,7 @@ try:
     from warp_drive.utils.data_feed import DataFeed
 except ModuleNotFoundError:
     raise ModuleNotFoundError(
-        "The env. consistency checker requires the 'WarpDrive' package, please run "
+        "The env consistency checker requires the 'WarpDrive' package, please run "
         "'pip install rl-warp-drive' first."
     ) from None
 except ValueError:
