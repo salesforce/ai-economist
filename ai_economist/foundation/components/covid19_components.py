@@ -25,6 +25,12 @@ try:
 
         _OBSERVATIONS = Constants.OBSERVATIONS
         _ACTIONS = Constants.ACTIONS
+except ModuleNotFoundError:
+    print(
+        "Warning: The 'WarpDrive' package is not found! "
+        "If you wish to use WarpDrive, please run "
+        "'pip install rl-warp-drive' first."
+    )
 except ValueError:
     print("No GPUs found! Running the simulation on a CPU.")
 

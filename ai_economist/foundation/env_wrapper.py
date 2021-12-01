@@ -8,23 +8,29 @@
 The env wrapper class
 """
 
+import sys
+
 import GPUtil
-import numpy as np
-from gym.spaces import Discrete, MultiDiscrete
 
 try:
     num_gpus_available = len(GPUtil.getAvailable())
     assert num_gpus_available > 0, "This script needs a GPU machine to run!!"
-    if num_gpus_available == 0:
-        print("No GPUs found! Running the simulation on a CPU.")
-    else:
-        print(f"{num_gpus_available} GPUs are available.")
-        from warp_drive.env_wrapper import EnvWrapper
-        from warp_drive.utils.recursive_obs_dict_to_spaces_dict import (
-            recursive_obs_dict_to_spaces_dict,
-        )
+    print(f"{num_gpus_available} GPUs are available.")
+    from warp_drive.env_wrapper import EnvWrapper
+    from warp_drive.utils.recursive_obs_dict_to_spaces_dict import (
+        recursive_obs_dict_to_spaces_dict,
+    )
+except ModuleNotFoundError:
+    print(
+        "This script requires the 'WarpDrive' package, please run "
+        "'pip install rl-warp-drive' first."
+    )
+    sys.exit()
 except ValueError:
     print("No GPUs found! Running the simulation on a CPU.")
+
+import numpy as np
+from gym.spaces import Discrete, MultiDiscrete
 
 
 class FoundationEnvWrapper(EnvWrapper):
