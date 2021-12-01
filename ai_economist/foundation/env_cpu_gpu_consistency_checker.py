@@ -8,7 +8,6 @@
 Consistency tests for comparing the cuda (gpu) / no cuda (cpu) version
 """
 
-import sys
 from collections import defaultdict
 
 import GPUtil
@@ -17,20 +16,19 @@ try:
     num_gpus_available = len(GPUtil.getAvailable())
     assert (
         num_gpus_available > 0
-    ), "The env. consistency checker needs a GPU machine to run!!"
+    ), "The env. consistency checker needs a GPU machine to run!"
     print(f"{num_gpus_available} GPUs are available.")
     import torch
     from warp_drive.utils.constants import Constants
     from warp_drive.utils.data_feed import DataFeed
 except ModuleNotFoundError:
-    print(
-        "This script requires the 'WarpDrive' package, please run "
+    raise ModuleNotFoundError(
+        "The env. consistency checker requires the 'WarpDrive' package, please run "
         "'pip install rl-warp-drive' first."
-    )
-    sys.exit()
+    ) from None
 except ValueError:
     raise ValueError(
-        "The env. consistency checker needs a GPU machine to run!!"
+        "The env. consistency checker needs a GPU machine to run!"
     ) from None
 
 import numpy as np

@@ -13,13 +13,12 @@ using `pip install rl-warp-drive`, and Pytorch(https://pytorch.org/)
 
 import argparse
 import os
-import sys
 
 import GPUtil
 
 try:
     num_gpus_available = len(GPUtil.getAvailable())
-    assert num_gpus_available > 0, "This training script needs a GPU machine to run!!"
+    assert num_gpus_available > 0, "This training script needs a GPU machine to run!"
     print(f"{num_gpus_available} GPUs are available.")
     import torch
     import yaml
@@ -27,13 +26,12 @@ try:
     from warp_drive.training.utils.data_loader import create_and_push_data_placeholders
     from warp_drive.utils.env_registrar import CustomizedEnvironmentRegistrar
 except ModuleNotFoundError:
-    print(
-        "This script requires the 'WarpDrive' package, please run "
+    raise ModuleNotFoundError(
+        "This training script requires the 'WarpDrive' package, please run "
         "'pip install rl-warp-drive' first."
-    )
-    sys.exit()
+    ) from None
 except ValueError:
-    raise ValueError("This training script needs a GPU machine to run!!") from None
+    raise ValueError("This training script needs a GPU machine to run!") from None
 
 from ai_economist.foundation.env_wrapper import FoundationEnvWrapper
 from ai_economist.foundation.scenarios.covid19.covid19_env import (

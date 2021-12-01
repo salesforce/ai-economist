@@ -28,7 +28,7 @@ try:
         _REWARDS = Constants.REWARDS
 except ModuleNotFoundError:
     print(
-        "Warning: The 'WarpDrive' package is not found! "
+        "Warning: The 'WarpDrive' package is not found and cannot be used! "
         "If you wish to use WarpDrive, please run "
         "'pip install rl-warp-drive' first."
     )
