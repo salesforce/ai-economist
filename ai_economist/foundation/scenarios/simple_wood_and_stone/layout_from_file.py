@@ -5,6 +5,8 @@
 # or https://opensource.org/licenses/BSD-3-Clause
 
 from copy import deepcopy
+from sys import path_importer_cache
+from pathlib import Path
 
 import numpy as np
 from scipy import signal
@@ -93,9 +95,8 @@ class LayoutFromFile(BaseEnvironment):
         self._mobile_agent_observation_range = int(mobile_agent_observation_range)
 
         # Load in the layout
-        path_to_layout_file = (
-            "/".join(__file__.split("/")[:-1]) + "/map_txt/" + env_layout_file
-        )
+        path_to_layout_file = Path(f"{Path(__file__).parent}/map_txt/{env_layout_file}")
+      
         with open(path_to_layout_file, "r") as f:
             self.env_layout_string = f.read()
             self.env_layout = self.env_layout_string.split(";")
