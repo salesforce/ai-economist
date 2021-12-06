@@ -11,24 +11,26 @@ Consistency tests for comparing the cuda (gpu) / no cuda (cpu) version
 from collections import defaultdict
 
 import GPUtil
-import numpy as np
-from gym.spaces import Discrete, MultiDiscrete
-
-from ai_economist.foundation.env_wrapper import FoundationEnvWrapper
 
 try:
     num_gpus_available = len(GPUtil.getAvailable())
-    assert (
-        num_gpus_available > 0
-    ), "The env. consistency checker needs a GPU machine to run!!"
+    assert num_gpus_available > 0, "The env consistency checker needs a GPU to run!"
     print(f"{num_gpus_available} GPUs are available.")
     import torch
     from warp_drive.utils.constants import Constants
     from warp_drive.utils.data_feed import DataFeed
-except ValueError:
-    raise ValueError(
-        "The env. consistency checker needs a GPU machine to run!!"
+except ModuleNotFoundError:
+    raise ModuleNotFoundError(
+        "The env consistency checker requires the 'WarpDrive' package, please run "
+        "'pip install rl-warp-drive' first."
     ) from None
+except ValueError:
+    raise ValueError("The env consistency checker needs a GPU to run!") from None
+
+import numpy as np
+from gym.spaces import Discrete, MultiDiscrete
+
+from ai_economist.foundation.env_wrapper import FoundationEnvWrapper
 
 pytorch_cuda_init_success = torch.cuda.FloatTensor(8)
 _OBSERVATIONS = Constants.OBSERVATIONS
