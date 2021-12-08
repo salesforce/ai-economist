@@ -79,45 +79,30 @@ class EnvironmentCPUvsGPU:
         env_configs,
         num_envs=2,
         num_episodes=2,
-        use_gpu_testing_mode=True,
         customized_env_registrar=None,
     ):
         """
         :param env_class: env class to test, for example, TagGridWorld
         :param env_config: env configuration
         :param num_envs: number of parallel example_envs in the test.
-            If use_gpu_testing_mode = True,
-            num_envs = 2 and num_agents=5 are enforced
         :param num_episodes: number of episodes in the test
             hint: number >=2 is recommended
             since it can fully test the reset
-        :param use_gpu_testing_mode: determine whether to simply load the
-            discrete_and_continuous_tag_envs.cubin or compile the .cu source
-            code to create a .cubin.
-            If use_gpu_testing_mode = True: do not forget to
-            include your testing env into discrete_and_continuous_tag_envs.cu
-            and build it. This is the recommended flow because the
-            Makefile will automate this build.
         :param customized_env_registrar: CustomizedEnvironmentRegistrar object
             it provides the customized env info (like src path) for the build
 
         """
         self.env_class = env_class
         self.env_configs = env_configs
-        if use_gpu_testing_mode:
-            print(
-                f"enforce the num_envs = {num_envs} because you have "
-                f"use_gpu_testing_mode = True, where the cubin file"
-                f"supporting this testing mode assumes 2 parallel example_envs"
-            )
         self.num_envs = num_envs
         self.num_episodes = num_episodes
-        self.use_gpu_testing_mode = use_gpu_testing_mode
         self.customized_env_registrar = customized_env_registrar
 
-    def test_env_reset_and_step(self):
+    def test_env_reset_and_step(self, consistency_threshold_pct=1):
         """
         Perform consistency checks for the reset() and step() functions
+        consistency_threshold_pct: consistency threshold as a percentage
+        (defaults to 1%).
         """
 
         for scenario in self.env_configs:
@@ -156,7 +141,6 @@ class EnvironmentCPUvsGPU:
                 self.env_class(**env_config),
                 num_envs=self.num_envs,
                 use_cuda=True,
-                testing_mode=self.use_gpu_testing_mode,
                 customized_env_registrar=self.customized_env_registrar,
             )
             env_gpu.reset_all_envs()
@@ -205,7 +189,9 @@ class EnvironmentCPUvsGPU:
             print("Running obs consistency check after the first reset.")
             for key in obs_cpu:
                 obs_gpu[key] = env_gpu.cuda_data_manager.pull_data_from_device(key)
-                self.run_consistency_checks(obs_cpu[key], obs_gpu[key])
+                self.run_consistency_checks(
+                    obs_cpu[key], obs_gpu[key], threshold_pct=consistency_threshold_pct
+                )
 
             # Consistency checks during step
             # ------------------------------
@@ -276,21 +262,33 @@ class EnvironmentCPUvsGPU:
                     "__all__": np.array([done["__all__"] for done in done_list])
                 }
 
-                # Update actions tensor on the gpu
-                _, _, done_gpu, _ = env_gpu.step()
-                done_gpu["__all__"] = done_gpu["__all__"].cpu().numpy()
+                # Step through all the environments
+                env_gpu.step_all_envs()
 
                 obs_gpu = {}
                 for key in obs_cpu:
                     obs_gpu[key] = env_gpu.cuda_data_manager.pull_data_from_device(key)
-                    self.run_consistency_checks(obs_cpu[key], obs_gpu[key])
+                    self.run_consistency_checks(
+                        obs_cpu[key],
+                        obs_gpu[key],
+                        threshold_pct=consistency_threshold_pct,
+                    )
 
                 rew_gpu = {}
                 for key in rew_cpu:
                     rew_gpu[key] = env_gpu.cuda_data_manager.pull_data_from_device(key)
-                    self.run_consistency_checks(rew_cpu[key], rew_gpu[key])
+                    self.run_consistency_checks(
+                        rew_cpu[key],
+                        rew_gpu[key],
+                        threshold_pct=consistency_threshold_pct,
+                    )
 
-                assert all(done_cpu["__all__"] == done_gpu["__all__"])
+                done_gpu = (
+                    env_gpu.cuda_data_manager.data_on_device_via_torch("_done_")
+                    .cpu()
+                    .numpy()
+                )
+                assert all(done_cpu["__all__"] == (done_gpu > 0))
 
                 # GPU reset
                 env_gpu.reset_only_done_envs()
@@ -323,13 +321,29 @@ class EnvironmentCPUvsGPU:
                                 key
                             ] = env_gpu.cuda_data_manager.pull_data_from_device(key)
                             self.run_consistency_checks(
-                                obs_cpu[key], obs_gpu[key][env_id]
+                                obs_cpu[key],
+                                obs_gpu[key][env_id],
+                                threshold_pct=consistency_threshold_pct,
                             )
+            print(
+                f"The CPU and the GPU environment outputs are consistent "
+                f"within {consistency_threshold_pct} percent."
+            )
 
     @staticmethod
-    def run_consistency_checks(cpu_value, gpu_value, decimal_places=3):
+    def run_consistency_checks(cpu_value, gpu_value, threshold_pct=1):
         """
         Perform consistency checks between the cpu and gpu values.
-        The default threshold is 3 decimal places.
+        The default threshold is 2 decimal places (1 %).
         """
-        assert np.max(np.abs(cpu_value - gpu_value)) < 10 ** (-decimal_places)
+        epsilon = 1e-10  # a small number for preventing indeterminate divisions
+        max_abs_diff = np.max(np.abs(cpu_value - gpu_value))
+        relative_max_abs_diff_pct = (
+            np.max(np.abs((cpu_value - gpu_value) / (epsilon + cpu_value))) * 100.0
+        )
+        # Assert that the max absolute difference is smaller than the threshold
+        # or the relative_max_abs_diff_pct is smaller (when the values are high)
+        assert (
+            max_abs_diff < threshold_pct / 100.0
+            or relative_max_abs_diff_pct < threshold_pct
+        )

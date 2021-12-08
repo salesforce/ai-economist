@@ -23,8 +23,7 @@ try:
     import torch
     import yaml
     from warp_drive.training.trainer import Trainer
-    from warp_drive.training.utils.data_loader import create_and_push_data_placeholders
-    from warp_drive.utils.env_registrar import CustomizedEnvironmentRegistrar
+    from warp_drive.utils.env_registrar import EnvironmentRegistrar
 except ModuleNotFoundError:
     raise ModuleNotFoundError(
         "This training script requires the 'WarpDrive' package, please run "
@@ -64,9 +63,9 @@ if __name__ == "__main__":
     config_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         "run_configs",
-        f"run_config_{args.env}.yaml",
+        f"{args.env}.yaml",
     )
-    with open(config_path, "r") as f:
+    with open(config_path, "r", encoding="utf8") as f:
         run_config = yaml.safe_load(f)
 
     num_envs = run_config["trainer"]["num_envs"]
@@ -75,9 +74,9 @@ if __name__ == "__main__":
     # Ensure that use_cuda is set to True (in order to run on the GPU)
     # ----------------------------------------------------------------
     if run_config["name"] == _COVID_AND_ECONOMY_ENVIRONMENT:
-        env_registrar = CustomizedEnvironmentRegistrar()
+        env_registry = EnvironmentRegistrar()
         this_file_dir = os.path.dirname(os.path.abspath(__file__))
-        env_registrar.register_environment(
+        env_registry.add_cuda_env_src_path(
             CovidAndEconomyEnvironment.name,
             os.path.join(
                 this_file_dir, "../foundation/scenarios/covid19/covid19_build.cu"
@@ -87,40 +86,28 @@ if __name__ == "__main__":
             CovidAndEconomyEnvironment(**run_config["env"]),
             num_envs=num_envs,
             use_cuda=True,
-            customized_env_registrar=env_registrar,
+            customized_env_registrar=env_registry,
         )
     else:
         raise NotImplementedError
 
-    # Policy mapping to agent ids: agents can share models
     # The policy_tag_to_agent_id_map dictionary maps
     # policy model names to agent ids.
     # ----------------------------------------------------
-    if len(run_config["policy"].keys()) == 1:
-        # Using a single (or shared policy) across all agents
-        policy_name = list(run_config["policy"])[0]
-        policy_tag_to_agent_id_map = {
-            policy_name: list(env_wrapper.env.taggers) + list(env_wrapper.env.runners)
-        }
-    else:
-        # Using different policies for different(sets) of agents
-        policy_tag_to_agent_id_map = {
-            "a": [str(agent_id) for agent_id in range(env_wrapper.env.n_agents)],
-            "p": ["p"],
-        }
-
-    # Assert that all the valid policies are mapped to at least one agent
-    assert set(run_config["policy"].keys()) == set(policy_tag_to_agent_id_map.keys())
+    policy_tag_to_agent_id_map = {
+        "a": [str(agent_id) for agent_id in range(env_wrapper.env.n_agents)],
+        "p": ["p"],
+    }
 
     # Flag indicating whether separate obs, actions and rewards placeholders
-    # have to be created for each policy
-    # Set "create_separate_placeholders_for_each_policy" to True
+    # have to be created for each policy.
+    # Set "create_separate_placeholders_for_each_policy" to True here
     # since the agents and planner have different observation
     # and action spaces.
     separate_placeholder_per_policy = True
 
     # Flag indicating the observation dimension corresponding to
-    # 'num_agents'
+    # 'num_agents'.
     # Note: WarpDrive assumes that all the observation are shaped
     # (num_agents, *feature_dim), i.e., the observation dimension
     # corresponding to 'num_agents' is the first one. Instead, if the
@@ -136,14 +123,6 @@ if __name__ == "__main__":
         policy_tag_to_agent_id_map=policy_tag_to_agent_id_map,
         create_separate_placeholders_for_each_policy=separate_placeholder_per_policy,
         obs_dim_corresponding_to_num_agents=obs_dim_corresponding_to_num_agents,
-    )
-
-    # Create and push data placeholders to the device
-    # -----------------------------------------------
-    create_and_push_data_placeholders(
-        env_wrapper,
-        policy_tag_to_agent_id_map,
-        trainer,
     )
 
     # Perform training

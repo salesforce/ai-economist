@@ -39,38 +39,40 @@ env:
     use_real_world_policies: False
 # Trainer settings
 trainer:
-    num_envs: 60 # Number of environment replicas
-    num_episodes: 1000000000 # Number of episodes to run the training for
+    num_envs: 60 # number of environment replicas
+    num_episodes: 2000 # number of episodes to run the training for
     train_batch_size: 5400 # total batch size used for training per iteration (across all the environments)
-    algorithm: "A2C" # trainer algorithm
-    vf_loss_coeff: 1 # loss coefficient for the value function loss
-    entropy_coeff: 0.05 # coefficient for the entropy component of the loss
-    clip_grad_norm: True # fla indicating whether to clip the gradient norm or not
-    max_grad_norm: 0.5 # when clip_grad_norm is True, the clip level
-    normalize_advantage: False # flag indicating whether to normalize advantage or not
-    normalize_return: False # flag indicating whether to normalize return or not
 # Policy network settings
 policy: # list all the policies below
     a:
-        to_train: True
-        name: "fully_connected"
-        gamma: 0.98 # discount rate gamms
-        lr: 0.005 # learning rate
+        to_train: True # flag indicating whether the model needs to be trained
+        algorithm: "PPO" # algorithm used to train the policy
+        vf_loss_coeff: 1 # loss coefficient schedule for the value function loss
+        entropy_coeff: 0.05 # loss coefficient schedule for the entropy loss
+        gamma: 0.98 # discount factor
+        lr: 0.0001 # learning rate
         model:
-        # dimension(s) of the fully connected layers as a list
+            type: "fully_connected"
             fc_dims: [256, 256]
             model_ckpt_filepath: ""
     p:
         to_train: True
-        name: "fully_connected"
+        algorithm: "PPO"
+        vf_loss_coeff: 1
+        entropy_coeff: # annealing entropy over time
+        - [0, 0.5]
+        - [50000000, 0.05]
+        algorithm: "PPO"
         gamma: 0.98
-        lr: 0.002
+        lr: 0.0001
         model:
+            type: "fully_connected"
             fc_dims: [256, 256]
             model_ckpt_filepath: ""
 # Checkpoint saving setting (and W&B logging)
 saving:
-    print_metrics_freq: 100 # How often (in iterations) to print the metrics
-    save_model_params_freq: 5000 # How often (in iterations) to save the model parameters
+    metrics_log_freq: 100 # How often (in iterations) to print the metrics
+    model_params_save_freq: 500 # How often (in iterations) to save the model parameters
     basedir: "/tmp" # base folder used for saving
+    name: "covid19_and_economy"
     tag: "experiments"

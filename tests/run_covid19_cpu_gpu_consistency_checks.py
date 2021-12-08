@@ -6,16 +6,16 @@
 
 import os
 
-from warp_drive.utils.env_registrar import CustomizedEnvironmentRegistrar
+from warp_drive.utils.env_registrar import EnvironmentRegistrar
 
 from ai_economist.foundation.env_cpu_gpu_consistency_checker import EnvironmentCPUvsGPU
 from ai_economist.foundation.scenarios.covid19.covid19_env import (
     CovidAndEconomyEnvironment,
 )
 
-env_registrar = CustomizedEnvironmentRegistrar()
+env_registrar = EnvironmentRegistrar()
 this_file_dir = os.path.dirname(os.path.abspath(__file__))
-env_registrar.register_environment(
+env_registrar.add_cuda_env_src_path(
     CovidAndEconomyEnvironment.name,
     os.path.join(this_file_dir, "../ai_economist/foundation/scenarios/covid19/covid19_build.cu")
 )
@@ -62,9 +62,8 @@ env_configs = {
 testing_class = EnvironmentCPUvsGPU(
     env_class=CovidAndEconomyEnvironment,
     env_configs=env_configs,
-    num_envs=2,
+    num_envs=3,
     num_episodes=2,
-    use_gpu_testing_mode=False,
     customized_env_registrar=env_registrar,
 )
 
