@@ -85,7 +85,6 @@ We recommend installing a fresh conda environment (for example, `ai-economist-tr
 conda create --name rllib-training python=3.7 --yes
 conda activate ai-economist-training
 
-pip install gym
 pip install ai-economist>=1.5
 pip install gym==0.21
 pip install tensorflow==1.14
