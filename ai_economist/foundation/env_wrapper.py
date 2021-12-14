@@ -31,10 +31,7 @@ except ValueError:
     print("No GPUs found! Running the simulation on a CPU.")
 
 import numpy as np
-from gym.spaces import Discrete, MultiDiscrete
-
-import numpy as np
-from gym import spaces
+from gym.spaces import Box, Dict, Discrete, MultiDiscrete
 
 BIG_NUMBER = 1e20
 
@@ -48,7 +45,7 @@ def recursive_obs_dict_to_spaces_dict(obs):
         for a multi-agent environment
 
     Returns:
-        spaces.Dict: A dictionary of observation spaces
+        Dict: A dictionary (space.Dict) of observation spaces
     """
     assert isinstance(obs, dict)
     dict_of_spaces = {}
@@ -64,13 +61,13 @@ def recursive_obs_dict_to_spaces_dict(obs):
         # assign Space
         if isinstance(_v, np.ndarray):
             x = float(BIG_NUMBER)
-            box = spaces.Box(low=-x, high=x, shape=_v.shape, dtype=_v.dtype)
+            box = Box(low=-x, high=x, shape=_v.shape, dtype=_v.dtype)
             low_high_valid = (box.low < 0).all() and (box.high > 0).all()
 
             # This loop avoids issues with overflow to make sure low/high are good.
             while not low_high_valid:
                 x = x // 2
-                box = spaces.Box(low=-x, high=x, shape=_v.shape, dtype=_v.dtype)
+                box = Box(low=-x, high=x, shape=_v.shape, dtype=_v.dtype)
                 low_high_valid = (box.low < 0).all() and (box.high > 0).all()
 
             dict_of_spaces[k] = box
@@ -79,7 +76,7 @@ def recursive_obs_dict_to_spaces_dict(obs):
             dict_of_spaces[k] = recursive_obs_dict_to_spaces_dict(_v)
         else:
             raise TypeError
-    return spaces.Dict(dict_of_spaces)
+    return Dict(dict_of_spaces)
 
 
 class FoundationEnvWrapper:
@@ -132,8 +129,9 @@ class FoundationEnvWrapper:
             for agent_id in range(self.env.n_agents):
                 obs[str(agent_id)] = {}
             for key in obs["a"]:
-                assert obs["a"][key].shape[-1] == self.env.n_agents, \
-                    "Please set 'flatten_observation' to False in the env config"
+                assert (
+                    obs["a"][key].shape[-1] == self.env.n_agents
+                ), "Please set 'flatten_observation' to False in the env config"
                 for agent_id in range(self.env.n_agents):
                     obs[str(agent_id)][key] = obs["a"][key][..., agent_id]
 
@@ -167,9 +165,9 @@ class FoundationEnvWrapper:
         # Flag to determine whether to use CUDA or not
         self.use_cuda = use_cuda
         if self.use_cuda:
-            num_gpus_available = len(GPUtil.getAvailable())
-            assert num_gpus_available > 0, "The env wrapper needs a GPU to run" \
-                                           " when use_cuda is True!"
+            assert len(GPUtil.getAvailable()) > 0, (
+                "The env wrapper needs a GPU to run" " when use_cuda is True!"
+            )
         self.env.use_cuda = use_cuda
         self.env.world.use_cuda = self.use_cuda
 
