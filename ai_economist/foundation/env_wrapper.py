@@ -12,26 +12,74 @@ import GPUtil
 
 try:
     num_gpus_available = len(GPUtil.getAvailable())
-    assert num_gpus_available > 0, "This script needs a GPU to run!"
     print(f"{num_gpus_available} GPUs are available.")
-    from warp_drive.managers.data_manager import CUDADataManager
-    from warp_drive.managers.function_manager import (
-        CUDAEnvironmentReset,
-        CUDAFunctionManager,
-    )
-    from warp_drive.utils.recursive_obs_dict_to_spaces_dict import (
-        recursive_obs_dict_to_spaces_dict,
-    )
+    if num_gpus_available == 0:
+        print("No GPUs found! Running the simulation on a CPU.")
+    else:
+        from warp_drive.managers.data_manager import CUDADataManager
+        from warp_drive.managers.function_manager import (
+            CUDAEnvironmentReset,
+            CUDAFunctionManager,
+        )
 except ModuleNotFoundError:
-    raise ModuleNotFoundError(
-        "The env wrapper requires the 'WarpDrive' package, please run "
+    print(
+        "Warning: The 'WarpDrive' package is not found and cannot be used! "
+        "If you wish to use WarpDrive, please run "
         "'pip install rl-warp-drive' first."
-    ) from None
+    )
 except ValueError:
-    raise ValueError("The env wrapper needs a GPU to run!") from None
+    print("No GPUs found! Running the simulation on a CPU.")
 
 import numpy as np
 from gym.spaces import Discrete, MultiDiscrete
+
+import numpy as np
+from gym import spaces
+
+BIG_NUMBER = 1e20
+
+
+def recursive_obs_dict_to_spaces_dict(obs):
+    """Recursively return the observation space dictionary
+    for a dictionary of observations
+
+    Args:
+        obs (dict): A dictionary of observations keyed by agent index
+        for a multi-agent environment
+
+    Returns:
+        spaces.Dict: A dictionary of observation spaces
+    """
+    assert isinstance(obs, dict)
+    dict_of_spaces = {}
+    for k, v in obs.items():
+
+        # list of lists are listified np arrays
+        _v = v
+        if isinstance(v, list):
+            _v = np.array(v)
+        elif isinstance(v, (int, np.integer, float, np.floating)):
+            _v = np.array([v])
+
+        # assign Space
+        if isinstance(_v, np.ndarray):
+            x = float(BIG_NUMBER)
+            box = spaces.Box(low=-x, high=x, shape=_v.shape, dtype=_v.dtype)
+            low_high_valid = (box.low < 0).all() and (box.high > 0).all()
+
+            # This loop avoids issues with overflow to make sure low/high are good.
+            while not low_high_valid:
+                x = x // 2
+                box = spaces.Box(low=-x, high=x, shape=_v.shape, dtype=_v.dtype)
+                low_high_valid = (box.low < 0).all() and (box.high > 0).all()
+
+            dict_of_spaces[k] = box
+
+        elif isinstance(_v, dict):
+            dict_of_spaces[k] = recursive_obs_dict_to_spaces_dict(_v)
+        else:
+            raise TypeError
+    return spaces.Dict(dict_of_spaces)
 
 
 class FoundationEnvWrapper:
@@ -60,6 +108,7 @@ class FoundationEnvWrapper:
         only relevant when use_cuda is True
         'customized_env_registrar': CustomizedEnvironmentRegistrar object
             it provides the customized env info (like src path) for the build
+            on a GPU (when use_cuda is True)
         """
         # Need to pass in an environment instance
         assert env_obj is not None
@@ -83,7 +132,8 @@ class FoundationEnvWrapper:
             for agent_id in range(self.env.n_agents):
                 obs[str(agent_id)] = {}
             for key in obs["a"]:
-                assert obs["a"][key].shape[-1] == self.env.n_agents
+                assert obs["a"][key].shape[-1] == self.env.n_agents, \
+                    "Please set 'flatten_observation' to False in the env config"
                 for agent_id in range(self.env.n_agents):
                     obs[str(agent_id)][key] = obs["a"][key][..., agent_id]
 
@@ -116,6 +166,10 @@ class FoundationEnvWrapper:
 
         # Flag to determine whether to use CUDA or not
         self.use_cuda = use_cuda
+        if self.use_cuda:
+            num_gpus_available = len(GPUtil.getAvailable())
+            assert num_gpus_available > 0, "The env wrapper needs a GPU to run" \
+                                           " when use_cuda is True!"
         self.env.use_cuda = use_cuda
         self.env.world.use_cuda = self.use_cuda
 
@@ -287,7 +341,7 @@ class FoundationEnvWrapper:
 
             result = None  # Do not return anything
         else:
-            assert actions is not None
+            assert actions is not None, "Please provide actions to step with."
             result = self.env.step(actions)
 
         return result
