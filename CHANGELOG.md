@@ -39,3 +39,6 @@
 - Saez tax policy
 - Add the split-world scenario class
 - Extend fixed skill/starting location logic to more than 4 agents
+
+# Release 1.6
+- Tutorial for training the covid and economy environment with WarpDrive
