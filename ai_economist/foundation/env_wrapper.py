@@ -12,7 +12,7 @@ import GPUtil
 
 try:
     num_gpus_available = len(GPUtil.getAvailable())
-    print(f"{num_gpus_available} GPUs are available.")
+    print(f"Inside env_wrapper.py: {num_gpus_available} GPUs are available.")
     if num_gpus_available == 0:
         print("No GPUs found! Running the simulation on a CPU.")
     else:

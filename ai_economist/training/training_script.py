@@ -19,7 +19,7 @@ import GPUtil
 try:
     num_gpus_available = len(GPUtil.getAvailable())
     assert num_gpus_available > 0, "This training script needs a GPU to run!"
-    print(f"{num_gpus_available} GPUs are available.")
+    print(f"Inside training_script.py: {num_gpus_available} GPUs are available.")
     import torch
     import yaml
     from warp_drive.training.trainer import Trainer

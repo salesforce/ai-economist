@@ -16,7 +16,7 @@ from ai_economist.foundation.base.base_component import (
 
 try:
     num_gpus_available = len(GPUtil.getAvailable())
-    print(f"{num_gpus_available} GPUs are available.")
+    print(f"Inside covid19_components.py: {num_gpus_available} GPUs are available.")
     if num_gpus_available == 0:
         print("No GPUs found! Running the simulation on a CPU.")
     else:
