@@ -141,7 +141,7 @@ class LayoutFromFile(BaseEnvironment):
         self.energy_cost = float(energy_cost)
         assert self.energy_cost >= 0
 
-        # What value to use for calculating the progress of energy annealing
+        # Which method to use for calculating the progress of energy annealing
         # If method = 'decay': #completed episodes
         # If method = 'auto' : #timesteps where avg. agent reward > 0
         self.energy_warmup_method = energy_warmup_method.lower()
@@ -197,9 +197,9 @@ class LayoutFromFile(BaseEnvironment):
             starting_ranked_locs = [
                 # Worst group of agents goes in top right
                 (0, self.world_size[1] - 1),
-                # Second worst group of agents goes in bottom left
+                # Second-worst group of agents goes in bottom left
                 (self.world_size[0] - 1, 0),
-                # Second best group of agents goes in top left
+                # Second-best group of agents goes in top left
                 (0, 0),
                 # Best group of agents goes in bottom right
                 (self.world_size[1] - 1, self.world_size[1] - 1),

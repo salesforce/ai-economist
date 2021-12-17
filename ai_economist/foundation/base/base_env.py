@@ -905,6 +905,9 @@ class BaseEnvironment(ABC):
         # For episode replay
         self._replay_log = {"reset": dict(seed_state=np.random.get_state()), "step": []}
 
+        # Reset the timestep counter
+        self.world.timestep = 0
+
         # Perform the scenario reset,
         # which includes resetting the world and agent states
         self.reset_starting_layout()
@@ -921,9 +924,6 @@ class BaseEnvironment(ABC):
         # Reset actions to that default.
         for agent in self.all_agents:
             agent.reset_actions()
-
-        # Reset the timestep counter
-        self.world.timestep = 0
 
         # Produce observations
         obs = self._generate_observations(

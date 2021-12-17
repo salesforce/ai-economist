@@ -139,7 +139,7 @@ The code repository is organized into the following components:
 
 ## Releases and Contributing
 
-- Please let us know if you encounter any bugs by filing a Github issue.
+- Please let us know if you encounter any bugs by filing a GitHub issue.
 - We appreciate all your contributions. If you plan to contribute new Components, Scenarios Entities, or anything else, please see our [contribution guidelines](https://www.github.com/salesforce/ai-economist/blob/master/CONTRIBUTING.md).
 
 ## Changelog

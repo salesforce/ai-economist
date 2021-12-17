@@ -17,7 +17,7 @@ class SimpleLabor(BaseComponent):
     """
     Allows Agents to select a level of labor, which earns income based on skill.
 
-    Labor is "simple" because this simplfies labor to a choice along a 1D axis. More
+    Labor is "simple" because this simplifies labor to a choice along a 1D axis. More
     concretely, this component adds 100 labor actions, each representing a choice of
     how many hours to work, e.g. action 50 represents doing 50 hours of work; each
     Agent earns income proportional to the product of its labor amount (representing

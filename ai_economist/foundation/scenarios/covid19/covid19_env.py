@@ -16,7 +16,7 @@ from ai_economist.foundation.utils import verify_activation_code
 
 try:
     num_gpus_available = len(GPUtil.getAvailable())
-    print(f"{num_gpus_available} GPUs are available.")
+    print(f"Inside covid19_env.py: {num_gpus_available} GPUs are available.")
     if num_gpus_available == 0:
         print("No GPUs found! Running the simulation on a CPU.")
     else:
@@ -642,7 +642,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
     def get_tensor_dictionary(self):
         """
-        Create a dictionary of (Pytorch-accesible) data to push to the GPU (device).
+        Create a dictionary of (Pytorch-accessible) data to push to the GPU (device).
         """
         tensor_dict = DataFeed()
         return tensor_dict

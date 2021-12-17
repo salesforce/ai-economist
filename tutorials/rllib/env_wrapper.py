@@ -183,7 +183,7 @@ class RLlibEnvWrapper(MultiAgentEnv):
         # Using the seeding utility from OpenAI Gym
         # https://github.com/openai/gym/blob/master/gym/utils/seeding.py
         _, seed1 = seeding.np_random(seed)
-        # Derive a random seed. This gets passed as a uint, but gets
+        # Derive a random seed. This gets passed as an uint, but gets
         # checked as an int elsewhere, so we need to keep it below
         # 2**31.
         seed2 = seeding.hash_seed(seed1 + 1) % 2 ** 31

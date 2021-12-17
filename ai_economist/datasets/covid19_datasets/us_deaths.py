@@ -15,7 +15,7 @@ class DatasetCovidDeathsUS:
     """
     Class to load COVID-19 deaths data for the US.
     Source: https://github.com/CSSEGISandData/COVID-19
-    Note: in this dataset, reporting deaths only started on the 22th of January 2020,
+    Note: in this dataset, reporting deaths only started on the 22nd of January 2020,
 
     Attributes:
         df: Timeseries dataframe of confirmed COVID deaths for all the US states
