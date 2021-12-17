@@ -137,7 +137,7 @@ class EnvironmentCPUvsGPU:
                         ]
 
             for key in obs_dict_of_lists:
-                obs_cpu[key] = np.stack((obs_dict_of_lists[key]), axis=0)
+                obs_cpu[key] = np.stack(obs_dict_of_lists[key], axis=0)
 
             # GPU version of env
             env_gpu = FoundationEnvWrapper(
@@ -218,7 +218,7 @@ class EnvironmentCPUvsGPU:
                         )
                         actions_list += [combined_actions]
 
-                    actions = np.stack((actions_list), axis=0)
+                    actions = np.stack(actions_list, axis=0)
                     name = _ACTIONS + "_" + policy
                     actions_data = DataFeed()
                     actions_data.add_data(name=name, data=actions)
@@ -256,10 +256,10 @@ class EnvironmentCPUvsGPU:
                     done_list += [done]
 
                 for key in obs_dict_of_lists:
-                    obs_cpu[key] = np.stack((obs_dict_of_lists[key]), axis=0)
+                    obs_cpu[key] = np.stack(obs_dict_of_lists[key], axis=0)
 
                 for key in rew_dict_of_lists:
-                    rew_cpu[key] = np.stack((rew_dict_of_lists[key]), axis=0)
+                    rew_cpu[key] = np.stack(rew_dict_of_lists[key], axis=0)
 
                 done_cpu = {
                     "__all__": np.array([done["__all__"] for done in done_list])
@@ -296,7 +296,7 @@ class EnvironmentCPUvsGPU:
                 # GPU reset
                 env_gpu.reset_only_done_envs()
 
-                # Now, pull done flags and they should be set to 0 (False) again
+                # Now, pull done flags, and assert that they are set to 0 (False) again
                 done_gpu = env_gpu.cuda_data_manager.pull_data_from_device("_done_")
                 assert done_gpu.sum() == 0
 
@@ -316,7 +316,7 @@ class EnvironmentCPUvsGPU:
                                 ] += [obs[key][subkey]]
 
                         for key in obs_dict_of_lists:
-                            obs_cpu[key] = np.stack((obs_dict_of_lists[key]), axis=0)
+                            obs_cpu[key] = np.stack(obs_dict_of_lists[key], axis=0)
 
                         obs_gpu = {}
                         for key in obs_cpu:

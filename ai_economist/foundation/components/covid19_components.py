@@ -137,7 +137,7 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
 
     def get_tensor_dictionary(self):
         """
-        Create a dictionary of (Pytorch-accesible) data to push to the GPU (device).
+        Create a dictionary of (Pytorch-accessible) data to push to the GPU (device).
         """
         tensor_dict = DataFeed()
         return tensor_dict
@@ -353,7 +353,7 @@ class FederalGovernmentSubsidy(BaseComponent):
 
     def get_tensor_dictionary(self):
         """
-        Create a dictionary of (Pytorch-accesible) data to push to the device
+        Create a dictionary of (Pytorch-accessible) data to push to the device
         """
         tensor_dict = DataFeed()
         return tensor_dict
@@ -585,7 +585,7 @@ class VaccinationCampaign(BaseComponent):
 
     def get_tensor_dictionary(self):
         """
-        Create a dictionary of (Pytorch-accesible) data to push to the device
+        Create a dictionary of (Pytorch-accessible) data to push to the device
         """
         tensor_dict = DataFeed()
         return tensor_dict

@@ -642,7 +642,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
     def get_tensor_dictionary(self):
         """
-        Create a dictionary of (Pytorch-accesible) data to push to the GPU (device).
+        Create a dictionary of (Pytorch-accessible) data to push to the GPU (device).
         """
         tensor_dict = DataFeed()
         return tensor_dict

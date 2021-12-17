@@ -249,4 +249,4 @@ Note: this is updated in the [training script](training_script.py).
 - `vf_share_layers` (bool): Share layers for value function.
 
 ## Additional Configurations
-(For additonal configurations, see RLlib [common parameters](https://docs.ray.io/en/releases-0.8.4/rllib-training.html#common-parameters), [PPO-specific configs](https://docs.ray.io/en/releases-0.8.4/rllib-algorithms.html#ppo) and [model parameters](https://docs.ray.io/en/releases-0.8.4/rllib-models.html?highlight=custom%20models#built-in-model-parameters). 
+(For additional configurations, see RLlib [common parameters](https://docs.ray.io/en/releases-0.8.4/rllib-training.html#common-parameters), [PPO-specific configs](https://docs.ray.io/en/releases-0.8.4/rllib-algorithms.html#ppo) and [model parameters](https://docs.ray.io/en/releases-0.8.4/rllib-models.html?highlight=custom%20models#built-in-model-parameters). 

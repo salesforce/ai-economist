@@ -46,7 +46,7 @@ In our [paper](https://arxiv.org/abs/2108.02755), we use two-level RL to train a
 
 The agents optimize their post-tax utility by working (labor) and earning taxable income. The planner optimizes social welfare by setting income tax rates. The agents need to adapt to policies set by the planner, and vice versa. This is a challenging learning problem because agents need to optimize behavior in a non-stationary environment. That is, if the planner changes the tax policy, it may change the reward that agents experience. In addition, learning can be unstable because both agents and planner explore. As such, designing a planner policy when the agents learn too leads to highly unstable RL.
 
-Our learning approach stablizes training using two key insights:
+Our learning approach stabilizes training using two key insights:
 
 1. agents should not face significant utility costs that discourage exploration early during learning, and
 2. the agents and social planner should be encouraged to gradually explore and co-adapt.
@@ -117,7 +117,7 @@ The training script an argument, `run-dir`, which refers to the run directory co
 python training_script.py --run-dir phase1
 ```
 
-Running this command also creates the `ckpts` and `dense_logs` subfolders inside the `phase1` folder, and populates them during training. Recall that during this phase, we train the agents (and not the planner), so only the agent policy model weights are saved during training.
+Running this command also creates the `ckpts` and `dense_logs` sub-folders inside the `phase1` folder, and populates them during training. Recall that during this phase, we train the agents (and not the planner), so only the agent policy model weights are saved during training.
 
 ### Step 2: Run Phase Two
 

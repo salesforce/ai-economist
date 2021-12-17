@@ -979,7 +979,7 @@ class PeriodicBracketTax(BaseComponent):
         last period's incomes, and the current marginal tax rates, including the
         marginal rate that will apply to their next unit of income.
 
-        The planner observes the same type of information, but for all of the agents. It
+        The planner observes the same type of information, but for all the agents. It
         also sees, for each agent, their marginal tax rate and reported income from
         the previous tax period.
         """

@@ -16,7 +16,7 @@ from ai_economist.foundation.base.base_env import BaseEnvironment
 
 
 def save_episode_log(game_object, filepath, compression_level=16):
-    """Save an lz4 compressed version of the dense log stored
+    """Save a lz4 compressed version of the dense log stored
     in the provided game object"""
     assert isinstance(game_object, BaseEnvironment)
     compression_level = int(compression_level)
