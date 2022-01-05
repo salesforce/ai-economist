@@ -1,5 +1,9 @@
 # Changelog
 
+# Release 1.7
+- Real Business Cycle simulation (in CUDA C) involving consumers, firms and the government.
+- A GPU-based PyTorch training code
+
 # Release 1.6 (2021-12-17)
 - Tutorial for training the covid and economy environment with WarpDrive
 
