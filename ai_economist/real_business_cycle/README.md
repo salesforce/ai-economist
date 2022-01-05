@@ -1,5 +1,5 @@
 # Real Business Cycle (RBC)
-This directory implements a **Real-Business-Cycle** (RBC) simulation with many heterogeneous, interacting strategic agents of various types, such as **consumers, firms, and the government**. For details, please refer to this paper `ADD PAPER LINK HERE`. We also provide training code that uses deep multi-agent reinforcement learning to determine optimal economic policies and dynamics in these many agent environments. Below are instructions required to launch the training runs.
+This directory implements a **Real-Business-Cycle** (RBC) simulation with many heterogeneous, interacting strategic agents of various types, such as **consumers, firms, and the government**. For details, please refer to this paper "Finding General Equilibria in Many-Agent Economic Simulations using Deep Reinforcement Learning (ArXiv link forthcoming)". We also provide training code that uses deep multi-agent reinforcement learning to determine optimal economic policies and dynamics in these many agent environments. Below are instructions required to launch the training runs.
 
 **Note: The experiments require a GPU to run!**
 
