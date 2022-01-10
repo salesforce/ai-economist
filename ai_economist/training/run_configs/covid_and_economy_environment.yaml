@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # For full license text, see the LICENSE file in the repo root
 # or https://opensource.org/licenses/BSD-3-Clause
-#
+
 # YAML configuration for the tag continuous environment
 name: "covid_and_economy_environment"
 # Environment settings
@@ -68,10 +68,10 @@ policy: # list all the policies below
             type: "fully_connected"
             fc_dims: [256, 256]
             model_ckpt_filepath: ""
-# Checkpoint saving setting (and W&B logging)
+# Checkpoint saving setting
 saving:
     metrics_log_freq: 100 # How often (in iterations) to print the metrics
     model_params_save_freq: 500 # How often (in iterations) to save the model parameters
     basedir: "/tmp" # base folder used for saving
-    name: "covid19_and_economy"
-    tag: "experiments"
+    name: "covid19_and_economy" # experiment name
+    tag: "experiments" # experiment tag
