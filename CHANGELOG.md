@@ -1,6 +1,6 @@
 # Changelog
 
-# Release 1.7
+# Release 1.7 (2022-01-11)
 - Real Business Cycle simulation (in CUDA C) involving consumers, firms and the government.
 - A GPU-based PyTorch training code
 
