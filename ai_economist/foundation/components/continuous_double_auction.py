@@ -183,11 +183,7 @@ class ContinuousDoubleAuction(BaseComponent):
 
         assert self.price_floor <= max_payment <= self.price_ceiling
 
-        bid = {
-            "buyer": agent.idx,
-            "bid": int(max_payment),
-            "bid_lifetime": 0,
-        }
+        bid = {"buyer": agent.idx, "bid": int(max_payment), "bid_lifetime": 0}
 
         # Add this to the bid book
         self.bids[resource].append(bid)
@@ -218,11 +214,7 @@ class ContinuousDoubleAuction(BaseComponent):
         # is there an upper limit?
         assert self.price_floor <= min_income <= self.price_ceiling
 
-        ask = {
-            "seller": agent.idx,
-            "ask": int(min_income),
-            "ask_lifetime": 0,
-        }
+        ask = {"seller": agent.idx, "ask": int(min_income), "ask_lifetime": 0}
 
         # Add this to the ask book
         self.asks[resource].append(ask)
