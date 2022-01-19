@@ -352,12 +352,7 @@ class BaseEnvironment(ABC):
         self._last_ep_metrics = None
 
         # For dense logging
-        self._dense_log = {
-            "world": [],
-            "states": [],
-            "actions": [],
-            "rewards": [],
-        }
+        self._dense_log = {"world": [], "states": [], "actions": [], "rewards": []}
         self._last_ep_dense_log = self.dense_log.copy()
 
         # For episode replay
@@ -895,12 +890,7 @@ class BaseEnvironment(ABC):
             ) == 0
 
         # For dense logging
-        self._dense_log = {
-            "world": [],
-            "states": [],
-            "actions": [],
-            "rewards": [],
-        }
+        self._dense_log = {"world": [], "states": [], "actions": [], "rewards": []}
 
         # For episode replay
         self._replay_log = {"reset": dict(seed_state=np.random.get_state()), "step": []}

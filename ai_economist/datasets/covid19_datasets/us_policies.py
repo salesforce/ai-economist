@@ -67,9 +67,7 @@ class DatasetCovidPoliciesUS:
             self.df = pd.read_csv(os.path.join(data_dir, filename), low_memory=False)
 
     def process_policy_data(
-        self,
-        stringency_policy_key="StringencyIndex",
-        num_stringency_levels=10,
+        self, stringency_policy_key="StringencyIndex", num_stringency_levels=10
     ):
         """
         Gather the relevant policy indicator frm the dataframe,
@@ -111,8 +109,7 @@ class DatasetCovidPoliciesUS:
 
         # Discretize the stringency indices
         discretized_stringency_policies = discretize(
-            policy_df[stringency_policy_key],
-            num_indicator_levels=num_stringency_levels,
+            policy_df[stringency_policy_key], num_indicator_levels=num_stringency_levels
         )
         policy_df.loc[:, stringency_policy_key] = discretized_stringency_policies
 

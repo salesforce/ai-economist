@@ -1474,13 +1474,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
         return productivity
 
-    def sir_step(
-        self,
-        S_tm1,
-        I_tm1,
-        stringency_level_tmk,
-        num_vaccines_available_t,
-    ):
+    def sir_step(self, S_tm1, I_tm1, stringency_level_tmk, num_vaccines_available_t):
         """
         Simulates SIR infection model in the US.
         """
@@ -1625,21 +1619,14 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         for agent in self.world.agents:
             state_name = self.us_state_idx_to_state_name[str(agent.idx)]
 
-            for field in [
-                "infected",
-                "recovered",
-                "deaths",
-            ]:
+            for field in ["infected", "recovered", "deaths"]:
                 metric_key = "{}/{} (millions)".format(state_name, field)
                 metrics_dict[metric_key] = (
                     agent.state["Total " + field.capitalize()] / 1e6
                 )
 
             metrics_dict["{}/mean_unemployment_rate (%)".format(state_name)] = (
-                np.mean(
-                    self.world.global_state["Unemployed"][1:, agent.idx],
-                    axis=0,
-                )
+                np.mean(self.world.global_state["Unemployed"][1:, agent.idx], axis=0)
                 / self.us_state_population[agent.idx]
                 * 100
             )
@@ -1647,13 +1634,12 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             metrics_dict[
                 "{}/mean_open_close_stringency_level".format(state_name)
             ] = np.mean(
-                self.world.global_state["Stringency Level"][1:, agent.idx],
-                axis=0,
+                self.world.global_state["Stringency Level"][1:, agent.idx], axis=0
             )
 
             metrics_dict["{}/total_productivity (billion $)".format(state_name)] = (
                 np.sum(
-                    self.world.global_state["Postsubsidy Productivity"][1:, agent.idx],
+                    self.world.global_state["Postsubsidy Productivity"][1:, agent.idx]
                 )
                 / 1e9
             )
@@ -1667,44 +1653,27 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
         # USA-level metrics
         metrics_dict["usa/vaccinated (% of population)"] = (
-            np.sum(
-                self.world.global_state["Vaccinated"][self.world.timestep],
-                axis=0,
-            )
+            np.sum(self.world.global_state["Vaccinated"][self.world.timestep], axis=0)
             / self.us_population
             * 100
         )
         metrics_dict["usa/deaths (thousands)"] = (
-            np.sum(
-                self.world.global_state["Deaths"][self.world.timestep],
-                axis=0,
-            )
-            / 1e3
+            np.sum(self.world.global_state["Deaths"][self.world.timestep], axis=0) / 1e3
         )
 
         metrics_dict["usa/mean_unemployment_rate (%)"] = (
             np.mean(
-                np.sum(
-                    self.world.global_state["Unemployed"][1:],
-                    axis=1,
-                )
+                np.sum(self.world.global_state["Unemployed"][1:], axis=1)
                 / self.us_population,
                 axis=0,
             )
             * 100
         )
         metrics_dict["usa/total_amount_subsidized (trillion $)"] = (
-            np.sum(
-                self.world.global_state["Subsidy"][1:],
-                axis=(0, 1),
-            )
-            / 1e12
+            np.sum(self.world.global_state["Subsidy"][1:], axis=(0, 1)) / 1e12
         )
         metrics_dict["usa/total_productivity (trillion $)"] = (
-            np.sum(
-                self.world.global_state["Postsubsidy Productivity"][1:],
-                axis=(0, 1),
-            )
+            np.sum(self.world.global_state["Postsubsidy Productivity"][1:], axis=(0, 1))
             / 1e12
         )
 

@@ -5,7 +5,6 @@
 # or https://opensource.org/licenses/BSD-3-Clause
 
 from copy import deepcopy
-from sys import path_importer_cache
 from pathlib import Path
 
 import numpy as np
@@ -96,7 +95,7 @@ class LayoutFromFile(BaseEnvironment):
 
         # Load in the layout
         path_to_layout_file = Path(f"{Path(__file__).parent}/map_txt/{env_layout_file}")
-      
+
         with open(path_to_layout_file, "r") as f:
             self.env_layout_string = f.read()
             self.env_layout = self.env_layout_string.split(";")
@@ -300,7 +299,7 @@ class LayoutFromFile(BaseEnvironment):
             ] = rewards.inv_income_weighted_coin_endowments(
                 coin_endowments=np.array(
                     [agent.total_endowment("Coin") for agent in self.world.agents]
-                ),
+                )
             )
         elif self.planner_reward_type == "inv_income_weighted_utility":
             curr_optimization_metric[
@@ -469,10 +468,7 @@ class LayoutFromFile(BaseEnvironment):
                 my_map = np.array(agent_idx_maps)
                 my_map[my_map == int(agent.idx) + 2] = 1
                 sidx = str(agent.idx)
-                obs[sidx] = {
-                    "map": curr_map,
-                    "idx_map": my_map,
-                }
+                obs[sidx] = {"map": curr_map, "idx_map": my_map}
                 obs[sidx].update(agent_invs[sidx])
 
         # Mobile agents only see within a window around their position
@@ -508,10 +504,7 @@ class LayoutFromFile(BaseEnvironment):
 
                 sidx = str(agent.idx)
 
-                obs[sidx] = {
-                    "map": visible_map,
-                    "idx_map": visible_idx,
-                }
+                obs[sidx] = {"map": visible_map, "idx_map": visible_idx}
                 obs[sidx].update(agent_locs[sidx])
                 obs[sidx].update(agent_invs[sidx])
 

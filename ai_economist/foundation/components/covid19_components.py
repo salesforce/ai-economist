@@ -651,11 +651,9 @@ class VaccinationCampaign(BaseComponent):
 
         # Normalized observations
         obs_dict = dict()
-        obs_dict["a"] = {
-            "t_until_next_vaccines": t_vec / self.delivery_interval,
-        }
+        obs_dict["a"] = {"t_until_next_vaccines": t_vec / self.delivery_interval}
         obs_dict[self.world.planner.idx] = {
-            "t_until_next_vaccines": t_until_next_vac / self.delivery_interval,
+            "t_until_next_vaccines": t_until_next_vac / self.delivery_interval
         }
 
         if self.observe_rate:
