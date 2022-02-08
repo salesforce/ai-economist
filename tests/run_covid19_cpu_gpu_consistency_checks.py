@@ -4,18 +4,43 @@
 # For full license text, see the LICENSE file in the repo root
 # or https://opensource.org/licenses/BSD-3-Clause
 
+"""
+Consistency tests for comparing the cuda (gpu) / no cuda (cpu) version
+"""
+
+import GPUtil
+
+try:
+    num_gpus_available = len(GPUtil.getAvailable())
+    assert num_gpus_available > 0, "The env consistency checker needs a GPU to run!"
+    print(
+        f"Inside env_cpu_gpu_consistency_checker.py: "
+        f"{num_gpus_available} GPUs are available."
+    )
+    import torch
+    from warp_drive.utils.constants import Constants
+    from warp_drive.utils.data_feed import DataFeed
+except ModuleNotFoundError:
+    raise ModuleNotFoundError(
+        "The env consistency checker requires the 'WarpDrive' package, please run "
+        "'pip install rl-warp-drive' first."
+    ) from None
+except ValueError:
+    raise ValueError("The env consistency checker needs a GPU to run!") from None
+
 import os
 
 from warp_drive.utils.env_registrar import EnvironmentRegistrar
+from warp_drive.env_cpu_gpu_consistency_checker import EnvironmentCPUvsGPU
 
-from ai_economist.foundation.env_cpu_gpu_consistency_checker import EnvironmentCPUvsGPU
+from ai_economist.foundation.env_wrapper import FoundationEnvWrapper
 from ai_economist.foundation.scenarios.covid19.covid19_env import (
     CovidAndEconomyEnvironment,
 )
 
-env_registrar = EnvironmentRegistrar()
+env_registry = EnvironmentRegistrar()
 this_file_dir = os.path.dirname(os.path.abspath(__file__))
-env_registrar.add_cuda_env_src_path(
+env_registry.add_cuda_env_src_path(
     CovidAndEconomyEnvironment.name,
     os.path.join(this_file_dir, "../ai_economist/foundation/scenarios/covid19/covid19_build.cu")
 )
@@ -59,12 +84,23 @@ env_configs = {
     }
 }
 
+num_agents = env_configs["test1"]["n_agents"]
+policy_to_agent_ids_mapping = {
+    "a": [str(agent_id) for agent_id in range(num_agents)],
+    "p": ["p"],
+}
+
 testing_class = EnvironmentCPUvsGPU(
-    env_class=CovidAndEconomyEnvironment,
+    dual_mode_env_class=CovidAndEconomyEnvironment,
     env_configs=env_configs,
     num_envs=3,
     num_episodes=2,
-    customized_env_registrar=env_registrar,
+    use_gpu_testing_mode=False,
+    env_wrapper=FoundationEnvWrapper,
+    env_registry=env_registry,
+    policy_tag_to_agent_id_map=policy_to_agent_ids_mapping,
+    create_separate_placeholders_for_each_policy=True,
+    obs_dim_corresponding_to_num_agents="last"
 )
 
 testing_class.test_env_reset_and_step()

@@ -12,6 +12,7 @@ using `pip install rl-warp-drive`, and Pytorch(https://pytorch.org/)
 """
 
 import argparse
+import logging
 import os
 
 import GPUtil
@@ -36,6 +37,8 @@ from ai_economist.foundation.env_wrapper import FoundationEnvWrapper
 from ai_economist.foundation.scenarios.covid19.covid19_env import (
     CovidAndEconomyEnvironment,
 )
+
+logging.getLogger().setLevel(logging.ERROR)
 
 pytorch_cuda_init_success = torch.cuda.FloatTensor(8)
 _COVID_AND_ECONOMY_ENVIRONMENT = "covid_and_economy_environment"
@@ -86,7 +89,7 @@ if __name__ == "__main__":
             CovidAndEconomyEnvironment(**run_config["env"]),
             num_envs=num_envs,
             use_cuda=True,
-            customized_env_registrar=env_registry,
+            env_registry=env_registry,
         )
     else:
         raise NotImplementedError
