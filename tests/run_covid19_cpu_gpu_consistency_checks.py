@@ -17,9 +17,8 @@ try:
         f"Inside env_cpu_gpu_consistency_checker.py: "
         f"{num_gpus_available} GPUs are available."
     )
-    import torch
-    from warp_drive.utils.constants import Constants
-    from warp_drive.utils.data_feed import DataFeed
+    from warp_drive.utils.env_registrar import EnvironmentRegistrar
+    from warp_drive.env_cpu_gpu_consistency_checker import EnvironmentCPUvsGPU
 except ModuleNotFoundError:
     raise ModuleNotFoundError(
         "The env consistency checker requires the 'WarpDrive' package, please run "
@@ -29,9 +28,6 @@ except ValueError:
     raise ValueError("The env consistency checker needs a GPU to run!") from None
 
 import os
-
-from warp_drive.utils.env_registrar import EnvironmentRegistrar
-from warp_drive.env_cpu_gpu_consistency_checker import EnvironmentCPUvsGPU
 
 from ai_economist.foundation.env_wrapper import FoundationEnvWrapper
 from ai_economist.foundation.scenarios.covid19.covid19_env import (
