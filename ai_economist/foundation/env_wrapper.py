@@ -100,7 +100,6 @@ class FoundationEnvWrapper:
         env_config=None,
         num_envs=1,
         use_cuda=False,
-        testing_mode=False,
         env_registry=None,
         event_messenger=None,
         process_id=0,
@@ -114,8 +113,6 @@ class FoundationEnvWrapper:
         'use_cuda': if True, step through the environment on the GPU, else on the CPU
         'num_envs': the number of parallel environments to instantiate. Note: this is
             only relevant when use_cuda is True
-        'testing_mode': a flag used to determine whether to simply load the .cubin (when
-            testing) or compile the .cu source code to create a .cubin and use that.
         'env_registry': EnvironmentRegistrar object
             it provides the customized env info (like src path) for the build
         'event_messenger': multiprocessing Event to sync up the build
@@ -132,9 +129,6 @@ class FoundationEnvWrapper:
                 and env_registry is not None
             )
             self.env = env_registry.get(env_name, use_cuda)(**env_config)
-        # testing mode should always be False here,
-        # as we will compile the .cu source code to create a .cubin
-        assert not testing_mode
 
         self.n_agents = self.env.num_agents
         self.episode_length = self.env.episode_length
