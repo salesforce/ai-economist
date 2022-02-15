@@ -91,7 +91,6 @@ testing_class = EnvironmentCPUvsGPU(
     env_configs=env_configs,
     num_envs=3,
     num_episodes=2,
-    use_gpu_testing_mode=False,
     env_wrapper=FoundationEnvWrapper,
     env_registry=env_registry,
     policy_tag_to_agent_id_map=policy_to_agent_ids_mapping,
