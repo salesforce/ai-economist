@@ -34,9 +34,9 @@ from ai_economist.foundation.scenarios.covid19.covid19_env import (
     CovidAndEconomyEnvironment,
 )
 
-env_registry = EnvironmentRegistrar()
+env_registrar = EnvironmentRegistrar()
 this_file_dir = os.path.dirname(os.path.abspath(__file__))
-env_registry.add_cuda_env_src_path(
+env_registrar.add_cuda_env_src_path(
     CovidAndEconomyEnvironment.name,
     os.path.join(this_file_dir, "../ai_economist/foundation/scenarios/covid19/covid19_build.cu")
 )
@@ -92,7 +92,7 @@ testing_class = EnvironmentCPUvsGPU(
     num_envs=3,
     num_episodes=2,
     env_wrapper=FoundationEnvWrapper,
-    env_registry=env_registry,
+    env_registrar=env_registrar,
     policy_tag_to_agent_id_map=policy_to_agent_ids_mapping,
     create_separate_placeholders_for_each_policy=True,
     obs_dim_corresponding_to_num_agents="last"

@@ -77,9 +77,9 @@ if __name__ == "__main__":
     # Ensure that use_cuda is set to True (in order to run on the GPU)
     # ----------------------------------------------------------------
     if run_config["name"] == _COVID_AND_ECONOMY_ENVIRONMENT:
-        env_registry = EnvironmentRegistrar()
+        env_registrar = EnvironmentRegistrar()
         this_file_dir = os.path.dirname(os.path.abspath(__file__))
-        env_registry.add_cuda_env_src_path(
+        env_registrar.add_cuda_env_src_path(
             CovidAndEconomyEnvironment.name,
             os.path.join(
                 this_file_dir, "../foundation/scenarios/covid19/covid19_build.cu"
@@ -89,7 +89,7 @@ if __name__ == "__main__":
             CovidAndEconomyEnvironment(**run_config["env"]),
             num_envs=num_envs,
             use_cuda=True,
-            env_registry=env_registry,
+            env_registrar=env_registrar,
         )
     else:
         raise NotImplementedError

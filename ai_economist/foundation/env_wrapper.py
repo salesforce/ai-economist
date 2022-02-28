@@ -100,7 +100,7 @@ class FoundationEnvWrapper:
         env_config=None,
         num_envs=1,
         use_cuda=False,
-        env_registry=None,
+        env_registrar=None,
         event_messenger=None,
         process_id=0,
     ):
@@ -109,11 +109,11 @@ class FoundationEnvWrapper:
         'env_name': an environment name that is registered on the
             WarpDrive environment registrar
         'env_config': environment configuration to instantiate
-            an environment from the registry
+            an environment from the registrar
         'use_cuda': if True, step through the environment on the GPU, else on the CPU
         'num_envs': the number of parallel environments to instantiate. Note: this is
             only relevant when use_cuda is True
-        'env_registry': EnvironmentRegistrar object
+        'env_registrar': EnvironmentRegistrar object
             it provides the customized env info (like src path) for the build
         'event_messenger': multiprocessing Event to sync up the build
             when using multiple processes
@@ -126,9 +126,9 @@ class FoundationEnvWrapper:
             assert (
                 env_name is not None
                 and env_config is not None
-                and env_registry is not None
+                and env_registrar is not None
             )
-            self.env = env_registry.get(env_name, use_cuda)(**env_config)
+            self.env = env_registrar.get(env_name, use_cuda)(**env_config)
 
         self.n_agents = self.env.num_agents
         self.episode_length = self.env.episode_length
@@ -220,7 +220,7 @@ class FoundationEnvWrapper:
                 env_name=self.name,
                 template_header_file="template_env_config.h",
                 template_runner_file="template_env_runner.cu",
-                customized_env_registrar=env_registry,
+                customized_env_registrar=env_registrar,
                 event_messenger=event_messenger,
             )
 
