@@ -8,6 +8,8 @@
 The env wrapper class
 """
 
+import logging
+
 import GPUtil
 
 try:
@@ -94,22 +96,39 @@ class FoundationEnvWrapper:
     def __init__(
         self,
         env_obj=None,
+        env_name=None,
+        env_config=None,
         num_envs=1,
         use_cuda=False,
-        customized_env_registrar=None,
+        env_registrar=None,
+        event_messenger=None,
+        process_id=0,
     ):
         """
-        'env_obj': an environment instance
+        'env_obj': an environment object
+        'env_name': an environment name that is registered on the
+            WarpDrive environment registrar
+        'env_config': environment configuration to instantiate
+            an environment from the registrar
         'use_cuda': if True, step through the environment on the GPU, else on the CPU
         'num_envs': the number of parallel environments to instantiate. Note: this is
-        only relevant when use_cuda is True
-        'customized_env_registrar': CustomizedEnvironmentRegistrar object
+            only relevant when use_cuda is True
+        'env_registrar': EnvironmentRegistrar object
             it provides the customized env info (like src path) for the build
-            on a GPU (when use_cuda is True)
+        'event_messenger': multiprocessing Event to sync up the build
+            when using multiple processes
+        'process_id': id of the process running WarpDrive
         """
         # Need to pass in an environment instance
-        assert env_obj is not None
-        self.env = env_obj
+        if env_obj is not None:
+            self.env = env_obj
+        else:
+            assert (
+                env_name is not None
+                and env_config is not None
+                and env_registrar is not None
+            )
+            self.env = env_registrar.get(env_name, use_cuda)(**env_config)
 
         self.n_agents = self.env.num_agents
         self.episode_length = self.env.episode_length
@@ -117,25 +136,13 @@ class FoundationEnvWrapper:
         assert self.env.name
         self.name = self.env.name
 
-        # Add observation space for each individual agent to the env
-        # when the collated agent "a" is present
-        # ----------------------------------------------------------
-        obs = self.env.reset()
-
-        obs[str(self.env.n_agents)] = obs["p"]  # planner refers to the final agent id
-
-        if "a" in obs:  # collated agent observation space
-            assert isinstance(obs["a"], dict)
-            for agent_id in range(self.env.n_agents):
-                obs[str(agent_id)] = {}
-            for key in obs["a"]:
-                assert (
-                    obs["a"][key].shape[-1] == self.env.n_agents
-                ), "Please set 'flatten_observation' to False in the env config"
-                for agent_id in range(self.env.n_agents):
-                    obs[str(agent_id)][key] = obs["a"][key][..., agent_id]
-
-            self.env.observation_space = recursive_obs_dict_to_spaces_dict(obs)
+        # Add observation space to the env
+        # --------------------------------
+        # Note: when the collated agent "a" is present, add obs keys
+        # for each individual agent to the env
+        # and remove the collated agent "a" from the observation
+        obs = self.obs_at_reset()
+        self.env.observation_space = recursive_obs_dict_to_spaces_dict(obs)
 
         # Add action space to the env
         # ---------------------------
@@ -159,15 +166,26 @@ class FoundationEnvWrapper:
             self.env.action_space["p"] = Discrete(self.env.get_agent("p").action_spaces)
         self.env.action_space["p"].dtype = np.int32
 
+        # Ensure the observation and action spaces share the same keys
+        assert set(self.env.observation_space.keys()) == set(
+            self.env.action_space.keys()
+        )
+
         # CUDA-specific initializations
         # -----------------------------
-
         # Flag to determine whether to use CUDA or not
         self.use_cuda = use_cuda
         if self.use_cuda:
             assert len(GPUtil.getAvailable()) > 0, (
                 "The env wrapper needs a GPU to run" " when use_cuda is True!"
             )
+            assert hasattr(self.env, "use_cuda")
+            assert hasattr(self.env, "cuda_data_manager")
+            assert hasattr(self.env, "cuda_function_manager")
+
+            assert hasattr(self.env.world, "use_cuda")
+            assert hasattr(self.env.world, "cuda_data_manager")
+            assert hasattr(self.env.world, "cuda_function_manager")
         self.env.use_cuda = use_cuda
         self.env.world.use_cuda = self.use_cuda
 
@@ -179,31 +197,36 @@ class FoundationEnvWrapper:
         # Steps specific to GPU runs
         # --------------------------
         if self.use_cuda:
+            logging.info("USING CUDA...")
+
             # Number of environments to run in parallel
             assert num_envs >= 1
             self.n_envs = num_envs
 
-            print("Initializing the CUDA data manager...")
+            logging.info("Initializing the CUDA data manager...")
             self.cuda_data_manager = CUDADataManager(
                 num_agents=self.n_agents,
                 episode_length=self.episode_length,
                 num_envs=self.n_envs,
             )
 
-            print("Initializing the CUDA function manager...")
+            logging.info("Initializing the CUDA function manager...")
             self.cuda_function_manager = CUDAFunctionManager(
                 num_agents=int(self.cuda_data_manager.meta_info("n_agents")),
                 num_envs=int(self.cuda_data_manager.meta_info("n_envs")),
+                process_id=process_id,
             )
             self.cuda_function_manager.compile_and_load_cuda(
                 env_name=self.name,
                 template_header_file="template_env_config.h",
                 template_runner_file="template_env_runner.cu",
-                customized_env_registrar=customized_env_registrar,
+                customized_env_registrar=env_registrar,
+                event_messenger=event_messenger,
             )
 
             # Register the CUDA step() function for the env
-            # Note: generate_observation() is a part of the step function itself
+            # Note: generate_observation() and compute_reward()
+            # should be part of the step function itself
             step_function = f"Cuda{self.name}Step"
             self.cuda_function_manager.initialize_functions([step_function])
             self.env.cuda_step = self.cuda_function_manager.get_function(step_function)
@@ -243,14 +266,21 @@ class FoundationEnvWrapper:
 
     def reset_all_envs(self):
         """
-        In addition to the reset_all_envs functionality in the base class,
-        the data dictionaries for all the component are copied to the device.
+        Reset the state of the environment to initialize a new episode.
+        if self.reset_on_host is True:
+            calls the CPU env to prepare and return the initial state
+        if self.use_cuda is True:
+            if self.reset_on_host is True:
+                expands initial state to parallel example_envs and push to GPU once
+                sets self.reset_on_host = False
+            else:
+                calls device hard reset managed by the CUDAResetter
         """
         self.env.world.timestep = 0
 
         if self.reset_on_host:
             # Produce observation
-            obs = self.env.reset()
+            obs = self.obs_at_reset()
         else:
             assert self.use_cuda
 
@@ -340,9 +370,40 @@ class FoundationEnvWrapper:
             result = None  # Do not return anything
         else:
             assert actions is not None, "Please provide actions to step with."
-            result = self.env.step(actions)
-
+            obs, rew, done, info = self.env.step(actions)
+            obs = self._reformat_obs(obs)
+            rew = self._reformat_rew(rew)
+            result = obs, rew, done, info
         return result
+
+    def obs_at_reset(self):
+        """
+        Calls the (Python) env to reset and return the initial state
+        """
+        obs = self.env.reset()
+        obs = self._reformat_obs(obs)
+        return obs
+
+    def _reformat_obs(self, obs):
+        if "a" in obs:
+            # This means the env uses collated obs.
+            # Set each individual agent as obs keys for processing with WarpDrive.
+            for agent_id in range(self.env.n_agents):
+                obs[str(agent_id)] = {}
+                for key in obs["a"].keys():
+                    obs[str(agent_id)][key] = obs["a"][key][..., agent_id]
+            del obs["a"]  # remove the key "a"
+        return obs
+
+    def _reformat_rew(self, rew):
+        if "a" in rew:
+            # This means the env uses collated rew.
+            # Set each individual agent as rew keys for processing with WarpDrive.
+            assert isinstance(rew, dict)
+            for agent_id in range(self.env.n_agents):
+                rew[str(agent_id)] = rew["a"][agent_id]
+            del rew["a"]  # remove the key "a"
+        return rew
 
     def reset(self):
         """
