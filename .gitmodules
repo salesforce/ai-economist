@@ -1,0 +1,3 @@
+[submodule "ai_economist/climate_cooperation"]
+	path = ai_economist/climate_cooperation_competition
+	url = https://github.com/mila-iqia/climate-cooperation-competition/
