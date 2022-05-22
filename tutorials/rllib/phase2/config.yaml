@@ -70,7 +70,7 @@ agent_policy:
   lr_schedule: null
   model:
     custom_model: keras_conv_lstm
-    custom_options:
+    custom_model_config:
       fc_dim: 128
       idx_emb_dim: 4
       input_emb_vocab: 100
@@ -78,10 +78,10 @@ agent_policy:
       num_conv: 2
       num_fc: 2
     max_seq_len: 25
+    vf_share_layers: false
   use_gae: true
   vf_clip_param: 50.0
   vf_loss_coeff: 0.05
-  vf_share_layers: false
 planner_policy:
   clip_param: 0.3
   entropy_coeff: 0.125
@@ -99,7 +99,7 @@ planner_policy:
   lr_schedule: null
   model:
     custom_model: keras_conv_lstm
-    custom_options:
+    custom_model_config:
       fc_dim: 256
       idx_emb_dim: 4
       input_emb_vocab: 100
@@ -107,10 +107,10 @@ planner_policy:
       num_conv: 2
       num_fc: 2
     max_seq_len: 25
+    vf_share_layers: false
   use_gae: true
   vf_clip_param: 50.0
   vf_loss_coeff: 0.05
-  vf_share_layers: false
 trainer:
   batch_mode: truncate_episodes
   env_config: null

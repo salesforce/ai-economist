@@ -304,9 +304,8 @@ if __name__ == "__main__":
         curr_iter = result["training_iteration"]
 
         logger.info(
-            "Iter %d: steps this-iter %d total %d -> %d/%d episodes done",
+            "Iter %d: total %d -> %d/%d episodes done",
             curr_iter,
-            result["timesteps_this_iter"],
             global_step,
             num_parallel_episodes_done,
             run_config["general"]["episodes"],

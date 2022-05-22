@@ -14,9 +14,10 @@ def remote_env_fun(trainer, env_function):
     where each entry in the dictionary comes from one of the active envs in the trainer.
     env_function must be a function that takes an environment as its single argument
     """
-
+    def env_tuple_func(env):
+        return env.env_id, env_function(env)
     nested_env_ids_and_results = trainer.workers.foreach_worker(
-        lambda w: [(env.env_id, env_function(env)) for env in w.async_env.envs]
+        lambda w: w.foreach_env(env_tuple_func)
     )
     nested_env_ids_and_results = nested_env_ids_and_results[
         1:

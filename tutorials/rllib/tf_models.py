@@ -9,17 +9,15 @@ import os
 import numpy as np
 from gym.spaces import Box, Dict
 from ray.rllib.models import ModelCatalog
-from ray.rllib.models.tf.recurrent_tf_modelv2 import (
-    RecurrentTFModelV2,
-    add_time_dimension,
-)
+from ray.rllib.models.tf.recurrent_net import RecurrentNetwork
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
+from ray.rllib.policy.rnn_sequencing import add_time_dimension
 from ray.rllib.utils import try_import_tf
 from tensorflow import keras
 
 # Disable TF INFO, WARNING, and ERROR messages
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-tf = try_import_tf()
+tf1, tf, tfv = try_import_tf()
 
 _WORLD_MAP_NAME = "world-map"
 _WORLD_IDX_MAP_NAME = "world-idx_map"
@@ -54,7 +52,7 @@ def apply_logit_mask(logits, mask):
     return logits + logit_mask
 
 
-class KerasConvLSTM(RecurrentTFModelV2):
+class KerasConvLSTM(RecurrentNetwork):
     """
     The model used in the paper "The AI Economist: Optimal Economic Policy
     Design via Two-level Deep Reinforcement Learning"
@@ -69,13 +67,13 @@ class KerasConvLSTM(RecurrentTFModelV2):
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
         super().__init__(obs_space, action_space, num_outputs, model_config, name)
 
-        input_emb_vocab = self.model_config["custom_options"]["input_emb_vocab"]
-        emb_dim = self.model_config["custom_options"]["idx_emb_dim"]
-        num_conv = self.model_config["custom_options"]["num_conv"]
-        num_fc = self.model_config["custom_options"]["num_fc"]
-        fc_dim = self.model_config["custom_options"]["fc_dim"]
-        cell_size = self.model_config["custom_options"]["lstm_cell_size"]
-        generic_name = self.model_config["custom_options"].get("generic_name", None)
+        input_emb_vocab = self.model_config["custom_model_config"]["input_emb_vocab"]
+        emb_dim = self.model_config["custom_model_config"]["idx_emb_dim"]
+        num_conv = self.model_config["custom_model_config"]["num_conv"]
+        num_fc = self.model_config["custom_model_config"]["num_fc"]
+        fc_dim = self.model_config["custom_model_config"]["fc_dim"]
+        cell_size = self.model_config["custom_model_config"]["lstm_cell_size"]
+        generic_name = self.model_config["custom_model_config"].get("generic_name", None)
 
         self.cell_size = cell_size
 
@@ -276,7 +274,6 @@ class KerasConvLSTM(RecurrentTFModelV2):
             + [seq_in, state_in_h_p, state_in_c_p, state_in_h_v, state_in_c_v],
             outputs=[logits, values, state_h_p, state_c_p, state_h_v, state_c_v],
         )
-        self.register_variables(self.rnn_model.variables)
         # self.rnn_model.summary()
 
     def _extract_input_list(self, dictionary):
@@ -286,9 +283,11 @@ class KerasConvLSTM(RecurrentTFModelV2):
         """Adds time dimension to batch before sending inputs to forward_rnn().
 
         You should implement forward_rnn() in your subclass."""
+        padded_inputs = input_dict["obs_flat"]
+        max_seq_len = tf.shape(padded_inputs)[0] // tf.shape(seq_lens)[0]
         output, new_state = self.forward_rnn(
             [
-                add_time_dimension(t, seq_lens)
+                add_time_dimension(t, max_seq_len=max_seq_len)
                 for t in self._extract_input_list(input_dict["obs"])
             ],
             state,
@@ -328,7 +327,7 @@ class KerasLinear(TFModelV2):
         mask = obs_space.original_space.spaces[self.MASK_NAME]
         mask_input = tf.keras.layers.Input(shape=mask.shape, name=self.MASK_NAME)
 
-        custom_options = model_config["custom_options"]
+        custom_options = model_config["custom_model_config"]
         if custom_options.get('fully_connected_value', False):
             self.fc_dim = int(custom_options["fc_dim"])
             self.num_fc = int(custom_options["num_fc"])
@@ -368,7 +367,6 @@ class KerasLinear(TFModelV2):
             )(self.inputs[0])
 
         self.base_model = tf.keras.Model(self.inputs, [logits, values])
-        self.register_variables(self.base_model.variables)
 
     def forward(self, input_dict, state, seq_lens):
         model_out, self._value_out = self.base_model(
@@ -417,7 +415,6 @@ class RandomAction(TFModelV2):
         masked_logits = apply_logit_mask(unmasked_logits, mask_input)
 
         self.base_model = keras.Model(self.inputs, [masked_logits, values])
-        self.register_variables(self.base_model.variables)
 
         # This will be set in the forward() call below
         self.values = None
